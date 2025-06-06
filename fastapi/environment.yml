@@ -1,0 +1,22 @@
+name: fastapi-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - fastapi            # core FastAPI
+  - uvicorn
+  - python-multipart   # form uploads
+  - jinja2             # templating
+  - pydantic-settings  # .env support
+  - ujson              # faster JSON
+  - orjson             # alternative JSON (optional)
+  - sqlalchemy
+  - pymysql
+  - bcrypt
+  - pygments
+  - pandas
+  - alembic
+  - cryptography
+  # keep pip only if you really need it later
+  - pip

@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  mysql:
+    build:
+      context: ./mysql  # 从 ./mysql 目录构建 MySQL 镜像
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password  # 设置 MySQL root 密码
+      MYSQL_DATABASE: mydatabase          # 创建数据库
+      MYSQL_USER: user                    # 创建用户
+      MYSQL_PASSWORD: password            # 用户密码
+    volumes:
+      - ./data/mysql:/var/lib/mysql    # 将数据卷挂载到项目下的data/mysql目录
+      - ./mysql/my.cnf:/etc/mysql/my.cnf  # 使用自定义的 my.cnf 配置文件
+    ports:
+      - "3307:3306"  # 将容器的 3306 端口映射到宿主机的 3307 端口
+    networks:
+      mynetwork:
+        ipv4_address: 172.28.0.2  # 为 MySQL 容器指定静态 IP 地址
+    command: --lower_case_table_names=2
+
+  fastapi-app:
+    build: ./fastapi
+    depends_on:
+      - mysql
+    container_name: fastapi-app
+
+    volumes:
+      - ./fastapi:/app  # 绑定本地代码目录，支持热重载
+    command: sh -c "sleep 10 && uvicorn app:app --host 0.0.0.0 --port 8000 --reload" # 启用热重载
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://user:password@mysql:3306/mydatabase
+    networks:
+      mynetwork:
+        ipv4_address: 172.28.0.3  # 为 FastAPI 容器指定静态 IP 地址
+
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf  # 挂载 Nginx 配置文件
+    ports:
+      - "80:80"
+    networks:
+      mynetwork:
+        ipv4_address: 172.28.0.4  # 为 Nginx 容器指定静态 IP 地址
+
+networks:
+  mynetwork:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.28.0.0/16"  # 自定义子网
+
+volumes:
+  mysql_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/mysql  # 让数据存储在相对路径
