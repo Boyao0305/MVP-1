@@ -96,7 +96,8 @@ class Learning_log(Base):
     daily_caiji = Column(Float)
     status = Column(String(255), nullable=True, index=True)
     date = Column(Date, nullable=True)
-    title = Column(String(255), nullable=True)
+    english_title = Column(String(255), nullable=True)
+    chinese_title = Column(String(255), nullable=True)
     outline = Column(String(1024), nullable=True)
     artical = Column(Text, nullable=True)
 

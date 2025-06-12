@@ -4,10 +4,16 @@ from fastapi import HTTPException
 import models      # adjust import paths as needed
 
 import random
-import datetime as dt
+import os, datetime as dt
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-import models           # adjust path if your models file lives elsewhere
+import models
+from typing import Dict, List
+from sqlalchemy.orm import Session, joinedload
+from openai import OpenAI
+import json,re
+
+# adjust path if your models file lives elsewhere
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  Helper to convert a numeric “average_caiji” into a CEFR level
@@ -147,10 +153,161 @@ def assign_daily_new_words(user_id: int, db: Session) -> dict[int, list[int]]:
         if not candidates:
             raise HTTPException(400, f"No suitable words for log {log.id} (tag={log.tag})")
 
-        selected = random.sample(candidates, min(daily_goal, len(candidates)))
+        selected = random.sample(candidates, min(daily_goal//2, len(candidates)))
         log.daily_new_words.extend(selected)      # inserts into daily_new_word_links
         assigned[log.id] = [w.id for w in selected]
 
     db.commit()
     return assigned
 
+def assign_daily_review_words(user_id: int, db: Session) -> Dict[int, List[models.Word_status]]:
+    """
+    • For each of today’s 5 Learning_log rows:
+        – find 'learning' words with the same tag AND in the chosen word-book
+        – sort by learning_factor ↑ and take daily_goal // 2
+        – link them via daily_review_word_links
+    • Returns {learning_log_id: [Word_status, …]}.
+    """
+    today = dt.date.today()
+
+    # 1️⃣  pull setting to get daily_goal and chosen word-book
+    setting = db.query(models.Learning_setting).get(user_id)
+    if not setting:
+        raise HTTPException(404, "Learning_setting not found")
+    daily_goal = setting.daily_goal or 0
+    wb_id     = setting.chosed_word_book_id
+    if wb_id is None:
+        raise HTTPException(400, "User has no chosen word-book")
+
+    # 2️⃣  fetch today’s five logs
+    logs = (
+        db.query(models.Learning_log)
+          .options(joinedload(models.Learning_log.daily_review_words))
+          .filter(models.Learning_log.user_id == user_id,
+                  models.Learning_log.date == today)
+          .all()
+    )
+    if len(logs) != 5:
+        raise HTTPException(400, f"Expected 5 logs today, found {len(logs)}")
+
+    result: Dict[int, List[models.Word_status]] = {}
+
+    for log in logs:
+        # 3️⃣  candidate Word_status rows for this tag
+        qs = (
+            db.query(models.Word_status)
+              .join(models.Word)                                    # ws.l_words alias
+              .join(models.Word.l_word_books)
+              .join(models.Word.l_tags)
+              .filter(
+                  models.Word_status.users_id == user_id,
+                  models.Word_status.status == "learning",
+                  models.Word_book.id == wb_id,
+                  models.Tag.name == log.tag,
+              )
+              .order_by(models.Word_status.learning_factor.asc())
+              .limit(max(0, daily_goal // 2))
+              .all()
+        )
+
+        # 4️⃣  link – avoid duplicates on rerun
+        for ws in qs:
+            if ws.l_words not in log.daily_review_words:
+                log.daily_review_words.append(ws.l_words)
+
+        result[log.id] = qs
+
+    db.commit()
+    return result
+
+from openai import OpenAI
+
+# build once per worker
+client = OpenAI(
+    api_key=os.getenv("DASHSCOPE_API_KEY", "sk-5ccb1709bc5b4ecbbd3aedaf69ca969b"),
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+
+PROMPT_TMPL = (
+    "词汇：{words}\n\n"
+    "请用以上词汇生成一个一百词左右的英语文章大纲（此大纲应能概括一篇五百词英语文章的内容），"
+    "再生成与此文章对应的中英文标题；回答应以json的格式输出（"
+    '{{"outline":"", "english_title":"", "chinese_title":""}}'
+    "）标题语言应生动且吸引人，请模仿微信公众号类似文章的标题"
+)
+
+def _call_llm(prompt: str) -> str:
+    """One call to DeepSeek-v3; returns the assistant message content."""
+    completion = client.chat.completions.create(
+        model="deepseek-v3",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return completion.choices[0].message.content.strip()
+
+def generate_outlines_for_date(
+    user_id: int, for_date: dt.date, db: Session
+) -> List[Dict]:
+    """
+    1. Fetch the five learning-log rows for (user_id, date)
+    2. For each row:
+       • merge today's new+review words → prompt
+       • call LLM
+       • parse JSON (handle ```json fences)
+       • SAVE outline / english_title / chinese_title into the row
+    3. Commit once; return data for the API layer.
+    """
+    logs = (
+        db.query(models.Learning_log)
+          .options(
+              joinedload(models.Learning_log.daily_new_words),
+              joinedload(models.Learning_log.daily_review_words),
+          )
+          .filter(
+              models.Learning_log.user_id == user_id,
+              models.Learning_log.date == for_date,
+          )
+          .all()
+    )
+    if len(logs) != 5:
+        raise HTTPException(
+            400, f"Expected 5 logs on {for_date.isoformat()}, found {len(logs)}"
+        )
+
+    results: List[Dict] = []
+
+    for log in logs:
+        # ① build prompt
+        words_set = {w.word for w in (log.daily_new_words + log.daily_review_words)}
+        prompt = PROMPT_TMPL.format(words=", ".join(words_set))
+
+        # ② LLM call
+        raw = _call_llm(prompt)
+
+        # ③ strip optional ```json fences → parse
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.I).strip()
+        try:
+            ans = json.loads(cleaned)
+        except json.JSONDecodeError:
+            ans = {
+                "outline": raw,
+                "english_title": "",
+                "chinese_title": "",
+            }
+
+        # ④ SAVE to the Learning_log row
+        log.outline        = ans.get("outline", "")
+        log.english_title  = ans.get("english_title", "")
+        log.chinese_title  = ans.get("chinese_title", "")
+
+        results.append(
+            {
+                "log": log,
+                "prompt": prompt,
+                "answer": ans,   # for API response
+            }
+        )
+
+    # ⑤ one commit for all five rows
+    db.commit()
+
+    return results

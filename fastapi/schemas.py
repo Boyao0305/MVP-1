@@ -132,7 +132,8 @@ class Learning_logbase(BaseModel):
     CEFR: str
     daily_caiji: float
     status: str
-    title: str
+    english_title: str
+    chinese_title: str
     outline: str
     artical: str
 

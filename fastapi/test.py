@@ -10,9 +10,10 @@ import schemas2
 from fastapi.responses import JSONResponse
 import models
 from sqlalchemy.orm import joinedload
-from functions.new_session import create_five_learning_logs, assign_daily_new_words
+from functions.new_session import create_five_learning_logs, assign_daily_new_words,assign_daily_review_words, generate_outlines_for_date,_call_llm
 
-
+from typing import List
+from sqlalchemy.sql.expression import func
 router = APIRouter()
 
 def get_db():
@@ -262,3 +263,70 @@ def generate_and_read_daily_words(user_id: int, db: Session = Depends(get_db)):
 
     # 3️⃣  FastAPI + orm_mode → automatic conversion to LogWithWords
     return logs
+@router.post(
+    "/daily_review_words/{user_id}",
+    response_model=list[schemas2.ReviewTagOut],
+    summary="Pick lowest-factor review words per tag and link them"
+)
+def daily_review_words(user_id: int, db: Session = Depends(get_db)):
+    promoted = assign_daily_review_words(user_id, db)   # id → [Word_status]
+
+    # build response
+    out: list[schemas2.ReviewTagOut] = []
+    for log_id, ws_rows in promoted.items():
+        if not ws_rows:
+            continue
+        tag = ws_rows[0].l_words.l_tags[0].name  # each row shares the same tag
+        out.append(
+            schemas2.ReviewTagOut(
+                learning_log_id=log_id,
+                tag=tag,
+                words=[
+                    schemas2.ReviewWordOut(
+                        id=ws.l_words.id,
+                        word=ws.l_words.word,
+                        CEFR=ws.l_words.CEFR,
+                        learning_factor=ws.learning_factor,
+                    )
+                    for ws in ws_rows
+                ],
+            )
+        )
+    return out
+
+
+@router.post(
+    "/generate_outlines/{user_id}",
+    response_model=list[schemas2.OutlineOut],
+    summary="Create prompts from today’s words and get outlines & titles from LLM",
+)
+def generate_outlines(
+    user_id: int,
+    date_str: str = dt.date.today().isoformat(),   # allow overriding via ?date=YYYY-MM-DD
+    db: Session = Depends(get_db),
+):
+    try:
+        for_date = dt.date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(422, "date must be YYYY-MM-DD")
+
+    data = generate_outlines_for_date(user_id, for_date, db)
+
+    # convert to schema objects
+    return [
+        schemas2.OutlineOut(
+            learning_log_id=item["log"].id,
+            tag=item["log"].tag,
+            prompt=item["prompt"],
+            outline=item["answer"]["outline"],
+            english_title=item["answer"]["english_title"],
+            chinese_title=item["answer"]["chinese_title"],
+        )
+        for item in data
+    ]
+@router.get("/random-words", response_model=List[schemas.Wordget])
+def get_random_words(db: Session = Depends(get_db)):
+    words = db.query(models.Word).order_by(func.random()).limit(20).all()
+    if not words:
+        raise HTTPException(status_code=404, detail="No words found in database.")
+    return words

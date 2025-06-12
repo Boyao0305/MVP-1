@@ -48,31 +48,15 @@ class LearningLog(LearningLogBase):
     # all newly-nullable columns ↓
     status: Optional[str] = None
     date: Optional[datetime.date] = None
-    title: Optional[str] = None
+    english_title: Optional[str] = None
+    chinese_title:Optional[str] = None
     outline: Optional[str] = None
     artical: Optional[str] = None     # spelling matches models.py
 
     class Config:
         orm_mode = True
 
-class LearningLog(LearningLogBase):
-    """
-    Response model for reading logs.
-    Most columns are nullable and therefore Optional here.
-    """
-    id: int
-    user_id: int                      # FK column (not nullable)
-    CEFR: Optional[str] = None
-    daily_caiji: Optional[float] = None
-    # all newly-nullable columns ↓
-    status: Optional[str] = None
-    date: Optional[datetime.date] = None
-    title: Optional[str] = None
-    outline: Optional[str] = None
-    artical: Optional[str] = None     # spelling matches models.py
 
-    class Config:
-        orm_mode = True
 
 # select new words
 class WordOut(BaseModel):
@@ -99,3 +83,65 @@ class LogWithWords(BaseModel):
     class Config:
         orm_mode = True
         allow_population_by_field_name = True   # lets FastAPI return `words`
+
+# daily review words
+
+class ReviewWordOut(BaseModel):
+    id: int
+    word: str
+    CEFR: Optional[str] = None
+    learning_factor: float
+
+    class Config:
+        orm_mode = True
+
+
+class ReviewTagOut(BaseModel):
+    learning_log_id: int
+    tag: str
+    words: List[ReviewWordOut]
+
+    class Config:
+        orm_mode = True
+
+# llm
+class OutlineOut(BaseModel):
+    learning_log_id: int
+    tag: str
+    prompt: str
+    outline: str
+    english_title: str
+    chinese_title: str
+
+# learning_log
+class LearningLogDetailOut(BaseModel):
+    user_id: int
+    date: datetime.date
+    tag: str
+    CEFR: Optional[str] = None
+    english_title: str
+    chinese_title: str
+    outline: str
+    daily_new_words: List[WordOut]
+    daily_review_words: List[WordOut]
+
+    class Config:
+        orm_mode = True
+# service_functions
+class WordBatchOut(BaseModel):
+    id: int
+    word: str
+    CEFR: Optional[str] = None
+    learning_factor: float = Field(..., alias="learning_factor")
+
+    class Config:
+        orm_mode = True
+        allow_population_by_field_name = True
+
+
+class TagWordsOut(BaseModel):
+    tag: str
+    words: List[WordBatchOut]
+
+    class Config:
+        orm_mode = True
