@@ -10,7 +10,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    phone_number = Column(Integer)
+    phone_number = Column(String(255), nullable=False)
     membership = Column(Integer, default=False)
     consecutive_learning = Column(Integer, nullable=False, default=0)
 

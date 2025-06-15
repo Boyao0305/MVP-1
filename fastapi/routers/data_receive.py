@@ -34,11 +34,12 @@ def receive_data(data: schemas2.Receive_data, db: Session = Depends(get_db)):
 )
 def read_learning_logs(
     user_id: int,
-    date: Optional[str] = None,                # ← query-param, optional
+    date: Optional[str] = "2025-06-13",                # ← query-param, optional
     db: Session = Depends(get_db),
 ):
     # 1️⃣  pick the date
     if date is None:
+        # target_date = dt.date.today()
         target_date = dt.date.today()
     else:
         try:

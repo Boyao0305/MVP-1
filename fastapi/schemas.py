@@ -40,7 +40,7 @@ class LoginRequest(Userbase):
 class FullRegisterRequest(BaseModel):
     username: str
     password: str
-    phone_number: int
+    phone_number: str
     chosed_word_book_id: Optional[int] = None
     average_caiji: Optional[float] = 1
     daily_goal: Optional[int] = 15
@@ -48,7 +48,7 @@ class FullRegisterRequest(BaseModel):
 class UserResponse(BaseModel):
     id: int
     username: str
-    phone_number: Optional[int]
+    phone_number: Optional[str]
     membership: int
     consecutive_learning: int
     chosed_word_book_id: Optional[int]

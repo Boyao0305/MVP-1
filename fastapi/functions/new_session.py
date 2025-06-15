@@ -2,7 +2,7 @@ import random
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 import models      # adjust import paths as needed
-
+import asyncio
 import random
 import os, datetime as dt
 from sqlalchemy.orm import Session
@@ -12,6 +12,8 @@ from typing import Dict, List
 from sqlalchemy.orm import Session, joinedload
 from openai import OpenAI
 import json,re
+from openai import AsyncOpenAI
+from starlette.concurrency import run_in_threadpool
 
 # adjust path if your models file lives elsewhere
 
@@ -223,7 +225,7 @@ def assign_daily_review_words(user_id: int, db: Session) -> Dict[int, List[model
 from openai import OpenAI
 
 # build once per worker
-client = OpenAI(
+async_client = AsyncOpenAI(
     api_key=os.getenv("DASHSCOPE_API_KEY", "sk-5ccb1709bc5b4ecbbd3aedaf69ca969b"),
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
@@ -236,78 +238,65 @@ PROMPT_TMPL = (
     "）标题语言应生动且吸引人，请模仿微信公众号类似文章的标题"
 )
 
-def _call_llm(prompt: str) -> str:
-    """One call to DeepSeek-v3; returns the assistant message content."""
-    completion = client.chat.completions.create(
+# ───────────────────  async LLM call  ─────────────────────────
+async def _call_llm(prompt: str) -> str:
+    r = await async_client.chat.completions.create(
         model="deepseek-v3",
         messages=[{"role": "user", "content": prompt}],
     )
-    return completion.choices[0].message.content.strip()
+    return r.choices[0].message.content.strip()
 
-def generate_outlines_for_date(
-    user_id: int, for_date: dt.date, db: Session
+# ───────────────────  main async helper  ──────────────────────
+async def generate_outlines_for_date_async(
+    user_id: int,
+    for_date: dt.date,
+    db: Session,
 ) -> List[Dict]:
-    """
-    1. Fetch the five learning-log rows for (user_id, date)
-    2. For each row:
-       • merge today's new+review words → prompt
-       • call LLM
-       • parse JSON (handle ```json fences)
-       • SAVE outline / english_title / chinese_title into the row
-    3. Commit once; return data for the API layer.
-    """
-    logs = (
-        db.query(models.Learning_log)
-          .options(
-              joinedload(models.Learning_log.daily_new_words),
-              joinedload(models.Learning_log.daily_review_words),
-          )
-          .filter(
-              models.Learning_log.user_id == user_id,
-              models.Learning_log.date == for_date,
-          )
-          .all()
-    )
-    if len(logs) != 5:
-        raise HTTPException(
-            400, f"Expected 5 logs on {for_date.isoformat()}, found {len(logs)}"
+    # 1️⃣ fetch logs (blocking) in a thread
+    logs = await run_in_threadpool(
+        lambda: (
+            db.query(models.Learning_log)
+              .options(
+                  joinedload(models.Learning_log.daily_new_words),
+                  joinedload(models.Learning_log.daily_review_words),
+              )
+              .filter(
+                  models.Learning_log.user_id == user_id,
+                  models.Learning_log.date == for_date,
+              )
+              .all()
         )
+    )
 
-    results: List[Dict] = []
+    if len(logs) != 5:
+        raise HTTPException(400, f"Expected 5 logs on {for_date}, found {len(logs)}")
 
+    # 2️⃣ compose prompts
+    prompts, metas = [], []
     for log in logs:
-        # ① build prompt
-        words_set = {w.word for w in (log.daily_new_words + log.daily_review_words)}
-        prompt = PROMPT_TMPL.format(words=", ".join(words_set))
+        words = {w.word for w in (log.daily_new_words + log.daily_review_words)}
+        prompts.append(PROMPT_TMPL.format(words=", ".join(words)))
+        metas.append(log)
 
-        # ② LLM call
-        raw = _call_llm(prompt)
+    # 3️⃣ fire 5 LLM calls in parallel
+    raw_answers = await asyncio.gather(*[_call_llm(p) for p in prompts])
 
-        # ③ strip optional ```json fences → parse
+    # 4️⃣ parse + save back into ORM objects
+    results: List[Dict] = []
+    for log, prompt, raw in zip(metas, prompts, raw_answers):
         cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.I).strip()
         try:
             ans = json.loads(cleaned)
         except json.JSONDecodeError:
-            ans = {
-                "outline": raw,
-                "english_title": "",
-                "chinese_title": "",
-            }
+            ans = {"outline": raw, "english_title": "", "chinese_title": ""}
 
-        # ④ SAVE to the Learning_log row
         log.outline        = ans.get("outline", "")
         log.english_title  = ans.get("english_title", "")
         log.chinese_title  = ans.get("chinese_title", "")
 
-        results.append(
-            {
-                "log": log,
-                "prompt": prompt,
-                "answer": ans,   # for API response
-            }
-        )
+        results.append({"log": log, "prompt": prompt, "answer": ans})
 
-    # ⑤ one commit for all five rows
-    db.commit()
+    # 5️⃣ commit once (also in a thread)
+    await run_in_threadpool(db.commit)
 
     return results

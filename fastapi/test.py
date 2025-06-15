@@ -10,10 +10,11 @@ import schemas2
 from fastapi.responses import JSONResponse
 import models
 from sqlalchemy.orm import joinedload
-from functions.new_session import create_five_learning_logs, assign_daily_new_words,assign_daily_review_words, generate_outlines_for_date,_call_llm
+from functions.new_session import create_five_learning_logs, assign_daily_new_words,assign_daily_review_words, generate_outlines_for_date_async
 
-from typing import List
+from typing import List, Optional
 from sqlalchemy.sql.expression import func
+import asyncio
 router = APIRouter()
 
 def get_db():
@@ -298,21 +299,20 @@ def daily_review_words(user_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/generate_outlines/{user_id}",
     response_model=list[schemas2.OutlineOut],
-    summary="Create prompts from today’s words and get outlines & titles from LLM",
+    summary="Generate 5 outlines + titles concurrently via LLM",
 )
-def generate_outlines(
+async def generate_outlines(
     user_id: int,
-    date_str: str = dt.date.today().isoformat(),   # allow overriding via ?date=YYYY-MM-DD
+    date: Optional[str] = None,      # /generate_outlines/{id}?date=YYYY-MM-DD
     db: Session = Depends(get_db),
 ):
     try:
-        for_date = dt.date.fromisoformat(date_str)
+        for_date = dt.date.fromisoformat(date) if date else dt.date.today()
     except ValueError:
         raise HTTPException(422, "date must be YYYY-MM-DD")
 
-    data = generate_outlines_for_date(user_id, for_date, db)
+    data = await generate_outlines_for_date_async(user_id, for_date, db)
 
-    # convert to schema objects
     return [
         schemas2.OutlineOut(
             learning_log_id=item["log"].id,
