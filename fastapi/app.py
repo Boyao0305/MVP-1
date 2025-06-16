@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import auth,data_receive
 from temporary import temp_command
-from website import api1
+from website import api1,generation, dictionary
 from database import Base, engine
 Base.metadata.create_all(bind=engine)
 import test
@@ -25,6 +25,9 @@ app.include_router(test.router)
 app.include_router(data_receive.router)
 app.include_router(service_router.router)
 app.include_router(api1.router)
+app.include_router(generation.router)
+app.include_router(dictionary.router)
+
 
 # @app.get("/")
 # async def root(request: Request):

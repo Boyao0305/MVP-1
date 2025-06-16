@@ -15,7 +15,7 @@ from functions.new_session import create_five_learning_logs, assign_daily_new_wo
 from typing import List, Optional
 from sqlalchemy.sql.expression import func
 import asyncio
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 def get_db():
     db = SessionLocal()
@@ -330,3 +330,29 @@ def get_random_words(db: Session = Depends(get_db)):
     if not words:
         raise HTTPException(status_code=404, detail="No words found in database.")
     return words
+
+@router.get(
+    "/daily_learning_logs_by_id/{log_id}",
+    response_model=list[schemas2.LearningLogDetailOut],
+    summary="Return today's (or specified) learning-log rows for a user",
+)
+def read_learning_logs(
+    log_id: int,              # ← query-param, optional
+    db: Session = Depends(get_db),
+):
+    # 1️⃣  pick the date
+
+
+    # 2️⃣  fetch rows with word lists pre-loaded
+    logs = (
+        db.query(models.Learning_log)
+
+          .filter(
+              models.Learning_log.id == log_id,
+          )
+          .all()
+    )
+    if not logs:
+        raise HTTPException(404, "No logs found for that user/date")
+
+    return logs

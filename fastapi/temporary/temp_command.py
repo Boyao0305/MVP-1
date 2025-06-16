@@ -14,7 +14,7 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/")
+@router.get("/api")
 async def root(request: Request):
     client_ip = request.headers.get("x-real-ip")
     forwarded_for = request.headers.get("x-forwarded-for")

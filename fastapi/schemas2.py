@@ -115,13 +115,14 @@ class OutlineOut(BaseModel):
 
 # learning_log
 class LearningLogDetailOut(BaseModel):
+    id: int
     user_id: int
-    date: datetime.date
+    date: Optional[datetime.date] = None
     tag: str
     CEFR: Optional[str] = None
-    english_title: str
-    chinese_title: str
-    outline: str
+    english_title: Optional[str]
+    chinese_title: Optional[str]
+    outline: Optional[str]
     daily_new_words: List[WordOut]
     daily_review_words: List[WordOut]
 

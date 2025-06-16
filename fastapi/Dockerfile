@@ -13,7 +13,8 @@ RUN echo "source activate fastapi-env" > ~/.bashrc
 ENV PATH /opt/conda/envs/fastapi-env/bin:$PATH
 
 # 复制应用代码
-COPY app.py .
+COPY website/ website/
+COPY . .
 
 # 暴露端口
 EXPOSE 8000

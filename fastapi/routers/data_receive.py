@@ -12,7 +12,7 @@ import datetime as dt
 
 
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 def get_db():
     db = SessionLocal()

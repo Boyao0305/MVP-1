@@ -7,7 +7,7 @@ import schemas
 import models
 
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 def get_db():
     db = SessionLocal()

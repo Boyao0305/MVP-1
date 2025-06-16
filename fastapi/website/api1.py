@@ -13,7 +13,7 @@ def get_db():
     finally:
         db.close()
 
-router = APIRouter(prefix="/words", tags=["word-selection"])
+router = APIRouter(prefix="/api")
 
 # --- CEFR groups per level -----------------------------------------------
 # 1 ➜ A1 & A2     2 ➜ B1 & B2     3 ➜ C1 & C2
@@ -39,7 +39,7 @@ class WordsBatchResp(schemas.BaseModel):
 
 
 @router.post(
-    "/generate/{level}/{tag}",
+    "/words/generate/{level}/{tag}",
     response_model=WordsBatchResp,
     summary="Pick 20 random words by tag & CEFR (grouped) and create a learning log",
 )
@@ -79,7 +79,7 @@ def generate_words_for_learning(
         )
 
     # 3️⃣  create the learning-log row and link the words
-    new_log = models.Learning_log(tag=tag, user_id=1)
+    new_log = models.Learning_log(tag=tag, user_id=1,CEFR='A1')
     new_log.daily_new_words.extend(words)
     db.add(new_log)
     db.commit()
