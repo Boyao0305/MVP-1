@@ -18,6 +18,7 @@ RUN npm install                         # NOT npm ci
 COPY . .
 
 # 4  Build — call Vite *via npx* so it works even if $PATH is odd
+RUN chmod -R +x node_modules/.bin
 RUN npx vite build                      # outputs to /app/dist
 
 ##################  Stage 2 — runtime  ##########################

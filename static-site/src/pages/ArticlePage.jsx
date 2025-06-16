@@ -18,7 +18,7 @@ export default function ArticlePage() {
     if (!logId) return;
     setLoading(true);
     controllerRef.current = new AbortController();
-    fetch(`http://localhost/api/generate_artical/${logId}`, {
+    fetch(`http://39.106.95.19:80/api/generate_artical/${logId}`, {
       method: 'POST',
       signal: controllerRef.current.signal
     })
@@ -90,7 +90,7 @@ export default function ArticlePage() {
       const top = wordRect.bottom - preRect.top;
       setPopup({ word, defs: [], coords: { left, top } });
       // Fetch definition
-      fetch(`http://localhost/api/word_search/${encodeURIComponent(word)}`)
+      fetch(`http://39.106.95.19:80/api/word_search/${encodeURIComponent(word)}`)
         .then(res => res.json())
         .then(defs => setPopup(p => ({ ...p, defs })))
         .catch(() => setPopup(p => ({ ...p, defs: ['查词失败'] })));
