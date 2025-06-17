@@ -49,10 +49,12 @@ services:
     build: ./nginx
     container_name: nginx
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf  # 挂载 Nginx 配置文件
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro # 挂载 Nginx 配置文件
     depends_on: [fastapi-app, static-site]
     ports:
       - "80:80"
+      - "443:443"
     networks:
       mynetwork:
         ipv4_address: 172.28.0.4  # 为 Nginx 容器指定静态 IP 地址
