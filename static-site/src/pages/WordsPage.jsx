@@ -16,7 +16,7 @@ export default function WordsPage() {
     if(!level || !topic) return;
     setLoading(true);
     try{
-      const res = await fetch(`http://39.106.95.19:80/api/words/generate/${level}/${topic}`,{
+      const res = await fetch(`http://masterwordai/api/words/generate/${level}/${topic}`,{
         method:'POST',
         headers:{
           'Content-Type':'application/json'
