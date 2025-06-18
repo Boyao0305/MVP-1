@@ -18,7 +18,7 @@ export default function ArticlePage() {
     if (!logId) return;
     setLoading(true);
     controllerRef.current = new AbortController();
-    fetch(`https://masterwordai/api/generate_artical/${logId}`, {
+    fetch(`/api/generate_artical/${logId}`, {
       method: 'POST',
       signal: controllerRef.current.signal
     })
@@ -90,7 +90,7 @@ export default function ArticlePage() {
       const top = wordRect.bottom - preRect.top;
       setPopup({ word, defs: [], coords: { left, top } });
       // Fetch definition
-      fetch(`https://masterwordai/api/word_search/${encodeURIComponent(word)}`)
+      fetch(`/api/word_search/${encodeURIComponent(word)}`)
         .then(res => res.json())
         .then(defs => setPopup(p => ({ ...p, defs })))
         .catch(() => setPopup(p => ({ ...p, defs: ['查词失败'] })));
