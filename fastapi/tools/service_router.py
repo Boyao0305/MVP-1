@@ -5,7 +5,7 @@ from database import SessionLocal
 
 from tools.service_functions import promote_unlearned_per_tag
 
-router = APIRouter()
+router = APIRouter(prefix="/api")
 def get_db():
     db = SessionLocal()
     try:
