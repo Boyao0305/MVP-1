@@ -35,6 +35,11 @@ class Word(Base):
     new_in_logs = relationship("Learning_log", secondary="daily_new_word_links")
     reviewed_in_logs = relationship("Learning_log", secondary="daily_review_word_links")
 
+class Dictionary(Base):
+    __tablename__ = "dictionaries"
+    id = Column(Integer, primary_key=True, index=True)
+    word = Column(String(255), nullable=False, index=True)
+    definition = Column(String(255))
 
 class Word_status(Base):
     __tablename__ = "word_statuss"

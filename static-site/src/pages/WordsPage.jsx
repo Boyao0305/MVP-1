@@ -5,6 +5,7 @@ export default function WordsPage() {
   const [searchParams] = useSearchParams();
   const level = searchParams.get('level');
   const topic = searchParams.get('topic');
+  const wordBookId = searchParams.get('word_book_id');
   const [words,setWords] = useState([]);
   const [loading,setLoading] = useState(false);
   const [learningLogId,setLearningLogId] = useState(
@@ -13,10 +14,10 @@ export default function WordsPage() {
   const navigate = useNavigate();
 
   const fetchWords = useCallback(async ()=>{
-    if(!level || !topic) return;
+    if(!level || !topic || !wordBookId) return;
     setLoading(true);
     try{
-      const res = await fetch(`/api/words/generate/${level}/${topic}`,{
+      const res = await fetch(`/api/words/generate/${level}/${topic}/${wordBookId}`,{
         method:'POST',
         headers:{
           'Content-Type':'application/json'
@@ -31,7 +32,7 @@ export default function WordsPage() {
     }finally{
       setLoading(false);
     }
-  },[level,topic]);
+  },[level,topic,wordBookId]);
 
   useEffect(()=>{
     fetchWords();
@@ -40,7 +41,6 @@ export default function WordsPage() {
   return (
     <div style={{maxWidth:800,margin:'2rem auto',padding:'0 1rem',background:'#f4f8ff',borderRadius:'16px',boxShadow:'0 2px 8px #6495ed22'}}>
       <h2 style={{color:'#6495ED'}}>Level {level} · {topic}</h2>
-      {learningLogId && <p>学习日志 ID: {learningLogId}</p>}
       {loading ? <p>加载中…</p> :
         <ul style={{paddingLeft:0,listStyle:'none'}}>
           {words.map(w=>(
@@ -53,7 +53,7 @@ export default function WordsPage() {
       <div style={{marginTop:'1.5rem'}}>
         <button onClick={fetchWords} style={{background:'#6495ED',color:'#fff',border:'none',borderRadius:'999px',padding:'0.6rem 2rem',fontSize:'1rem',cursor:'pointer',marginRight:'1rem',boxShadow:'0 2px 8px #6495ed33'}}>换一批</button>
         {learningLogId && words.length > 0 && !loading && (
-          <button style={{background:'#6495ED',color:'#fff',border:'none',borderRadius:'999px',padding:'0.6rem 2rem',fontSize:'1rem',cursor:'pointer',boxShadow:'0 2px 8px #6495ed33'}} onClick={() => navigate(`/article?log_id=${learningLogId}`)}>下一步</button>
+          <button style={{background:'#6495ED',color:'#fff',border:'none',borderRadius:'999px',padding:'0.6rem 2rem',fontSize:'1rem',cursor:'pointer',boxShadow:'0 2px 8px #6495ed33'}} onClick={() => navigate(`/article?log_id=${learningLogId}`, { state: { learnedWords: words.map(w => w.word) } })}>下一步</button>
         )}
       </div>
     </div>

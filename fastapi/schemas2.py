@@ -128,6 +128,9 @@ class LearningLogDetailOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+
 # service_functions
 class WordBatchOut(BaseModel):
     id: int
@@ -146,3 +149,6 @@ class TagWordsOut(BaseModel):
 
     class Config:
         orm_mode = True
+# dicrtionary
+class Word_definition(BaseModel):
+    definition: str

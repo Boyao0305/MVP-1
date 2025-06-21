@@ -39,13 +39,14 @@ class WordsBatchResp(schemas.BaseModel):
 
 
 @router.post(
-    "/words/generate/{level}/{tag}",
+    "/words/generate/{level}/{tag}/{word_book_id}",
     response_model=WordsBatchResp,
     summary="Pick 20 random words by tag & CEFR (grouped) and create a learning log",
 )
 def generate_words_for_learning(
     level: int,
     tag: str,
+    word_book_id: int,
     db: Session = Depends(get_db),
 ):
     """
@@ -66,13 +67,24 @@ def generate_words_for_learning(
     qry = (
         db.query(models.Word)
         .join(models.Word.l_tags)
+        .join(models.Word.l_word_books)
         .filter(models.Tag.name == tag)
+        .filter(models.Word_book.id == word_book_id)
+        .filter(models.Word.CEFR.in_(allowed_cefr))
+    )
+    qry2 = (
+        db.query(models.Word)
+        .join(models.Word.l_tags)
+        .join(models.Word.l_word_books)
+        .filter(models.Tag.name == "None")
+        .filter(models.Word_book.id == word_book_id)
         .filter(models.Word.CEFR.in_(allowed_cefr))
     )
 
     # 2️⃣  random-pick 20
-    words = qry.order_by(func.random()).limit(20).all()
-    if len(words) < 20:
+    words = qry.order_by(func.random()).limit(10).all()
+    words2 = qry2.order_by(func.random()).limit(10).all()
+    if len(words) < 10:
         raise HTTPException(
             404,
             detail=f"Not enough words for tag='{tag}' & level={level}",
@@ -82,11 +94,14 @@ def generate_words_for_learning(
     new_log = models.Learning_log(tag=tag, user_id=1,CEFR='A1')
     new_log.daily_new_words.extend(words)
     db.add(new_log)
+    for ws in words2:
+        new_log.daily_new_words.append(ws)
+
     db.commit()
     db.refresh(new_log)
 
     # 4️⃣  response
     return {
         "learning_log_id": new_log.id,
-        "words": words,
+        "words": new_log.daily_new_words,
     }

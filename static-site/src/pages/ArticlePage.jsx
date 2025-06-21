@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 
 export default function ArticlePage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const logId = searchParams.get('log_id');
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,6 +14,9 @@ export default function ArticlePage() {
   const popupRef = useRef();
   const preRef = useRef();
   const wordRefs = useRef({});
+
+  // Get learned words from navigation state
+  const learnedWords = (location.state && location.state.learnedWords) || [];
 
   useEffect(() => {
     if (!logId) return;
@@ -44,30 +48,25 @@ export default function ArticlePage() {
     return () => controllerRef.current?.abort();
   }, [logId]);
 
-  // Helper to render bold for **text** and clickable words
-  function renderWithBoldAndClickable(text) {
-    // Split by **bold**
-    const boldParts = text.split(/(\*\*[^*]+\*\*)/g);
-    return boldParts.map((part, i) => {
-      if (/^\*\*[^*]+\*\*$/.test(part)) {
-        // Remove ** and render as bold
-        return <strong key={i}>{renderWords(part.slice(2, -2), true)}</strong>;
-      }
-      return <span key={i}>{renderWords(part, false)}</span>;
-    });
-  }
-
-  // Helper to render each word as clickable if it's English
-  function renderWords(str, isBold) {
+  // Helper to render each word, highlighting learned words, and making all English words clickable
+  function renderArticleWithHighlights(str) {
     // Split by word boundaries, keep punctuation
     return str.split(/(\b)/).map((w, idx) => {
       // Only match English words
       if (/^[A-Za-z][A-Za-z'-]*$/.test(w)) {
+        const isLearned = learnedWords.map(lw => lw.toLowerCase()).includes(w.toLowerCase());
         return (
           <span
             key={idx}
             ref={el => { if (el) wordRefs.current[w + '-' + idx] = el; }}
-            style={{ cursor: 'pointer', background: popup.word === w && popup.coords ? '#6495ED22' : undefined, borderRadius: '4px', position: 'relative', color: isBold ? '#6495ED' : undefined }}
+            style={{
+              cursor: 'pointer',
+              background: popup.word === w && popup.coords ? '#6495ED22' : isLearned ? '#6495ED22' : undefined,
+              borderRadius: '4px',
+              position: 'relative',
+              color: isLearned ? '#6495ED' : undefined,
+              fontWeight: isLearned ? 700 : undefined
+            }}
             onClick={e => handleWordClick(w, idx)}
           >
             {w}
@@ -80,7 +79,12 @@ export default function ArticlePage() {
 
   // Handle word click
   function handleWordClick(word, idx) {
-    // Get position for popup relative to pre block
+    // If popup is open, close it on any word click
+    if (popup.coords) {
+      setPopup({ word: '', defs: [], coords: null });
+      return;
+    }
+    // Otherwise, open popup for the word
     const wordEl = wordRefs.current[word + '-' + idx];
     const preEl = preRef.current;
     if (wordEl && preEl) {
@@ -92,7 +96,7 @@ export default function ArticlePage() {
       // Fetch definition
       fetch(`/api/word_search/${encodeURIComponent(word)}`)
         .then(res => res.json())
-        .then(defs => setPopup(p => ({ ...p, defs })))
+        .then(defStr => setPopup(p => ({ ...p, defs: [defStr] })))
         .catch(() => setPopup(p => ({ ...p, defs: ['查词失败'] })));
     }
   }
@@ -100,9 +104,7 @@ export default function ArticlePage() {
   // Hide popup on click outside
   useEffect(() => {
     function onClick(e) {
-      if (popupRef.current && !popupRef.current.contains(e.target)) {
-        setPopup({ word: '', defs: [], coords: null });
-      }
+      setPopup({ word: '', defs: [], coords: null });
     }
     if (popup.coords) {
       document.addEventListener('mousedown', onClick);
@@ -116,7 +118,7 @@ export default function ArticlePage() {
       <h2 style={{color:'#6495ED'}}>生成的文章</h2>
       {loading && <p>生成中…</p>}
       <pre ref={preRef} style={{whiteSpace:'pre-wrap',wordBreak:'break-all',background:'#fff',padding:'1.5rem',borderRadius:'12px',minHeight:'200px',fontSize:'1.1rem',boxShadow:'0 1px 4px #6495ed11',position:'relative'}}>
-        {renderWithBoldAndClickable(text)}
+        {renderArticleWithHighlights(text)}
       </pre>
       {popup.coords && (
         <div
