@@ -50,6 +50,8 @@ export default function ArticlePage() {
 
   // Helper to render each word, highlighting learned words, and making all English words clickable
   function renderArticleWithHighlights(str) {
+    // Remove all asterisks from the text
+    str = str.replace(/\*/g, '');
     // Split by word boundaries, keep punctuation
     return str.split(/(\b)/).map((w, idx) => {
       // Only match English words
@@ -61,7 +63,7 @@ export default function ArticlePage() {
             ref={el => { if (el) wordRefs.current[w + '-' + idx] = el; }}
             style={{
               cursor: 'pointer',
-              background: popup.word === w && popup.coords ? '#6495ED22' : isLearned ? '#6495ED22' : undefined,
+              background: popup.word === w && popup.coords ? '#6495ED22' : undefined,
               borderRadius: '4px',
               position: 'relative',
               color: isLearned ? '#6495ED' : undefined,
@@ -117,7 +119,7 @@ export default function ArticlePage() {
       <div style={{marginBottom:'1rem',color:'#6495ED',fontWeight:600,fontSize:'1rem'}}>点击单词查词</div>
       <h2 style={{color:'#6495ED'}}>生成的文章</h2>
       {loading && <p>生成中…</p>}
-      <pre ref={preRef} style={{whiteSpace:'pre-wrap',wordBreak:'break-all',background:'#fff',padding:'1.5rem',borderRadius:'12px',minHeight:'200px',fontSize:'1.1rem',boxShadow:'0 1px 4px #6495ed11',position:'relative'}}>
+      <pre ref={preRef} style={{whiteSpace:'pre-wrap',overflowWrap:'break-word',wordBreak:'normal',background:'#fff',padding:'1.5rem',borderRadius:'12px',minHeight:'200px',fontSize:'1.1rem',boxShadow:'0 1px 4px #6495ed11',position:'relative',fontFamily:'Segoe UI, Arial, sans-serif',textAlign:'justify'}}>
         {renderArticleWithHighlights(text)}
       </pre>
       {popup.coords && (
