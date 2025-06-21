@@ -23,6 +23,6 @@ RUN npx vite build                      # outputs to /app/dist
 
 ##################  Stage 2 — runtime  ##########################
 FROM nginx:1.25-alpine
-COPY --from=builder /app/dist /output/
+COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
