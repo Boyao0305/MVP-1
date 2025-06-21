@@ -39,7 +39,6 @@ services:
 
   static-site:
     build: ./static-site
-    command: ["true"]  # see Dockerfile below
     command: [ "sh", "-c", "cp -r /app/dist/* /output/" ]  # one-shot copy → exits
     volumes:
         - static_dist:/output
