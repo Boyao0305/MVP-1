@@ -39,6 +39,7 @@ services:
 
   static-site:
     build: ./static-site
+    container_name: static-site
     command: [ "true" ]  # one-shot copy → exits
     volumes:
         - static_dist:/output
