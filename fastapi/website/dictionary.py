@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api")
 
 # Initialize
 
-lemmatizer = WordNetLemmatizer()
+# lemmatizer = WordNetLemmatizer()
 
 # (Optional: during startup)
 # nltk.download('wordnet')
@@ -69,8 +69,8 @@ def word_search(word: str,  db: Session = Depends(get_db)):
     # ,
     # response_model = List[str]
     # Try lemmatized forms
-    forms_to_try.append(lemmatizer.lemmatize(word0, pos="v"))  # verb
-    forms_to_try.append(lemmatizer.lemmatize(word0, pos="n"))  # noun
+    # forms_to_try.append(lemmatizer.lemmatize(word0, pos="v"))  # verb
+    # forms_to_try.append(lemmatizer.lemmatize(word0, pos="n"))  # noun
 
     # Try manual stem variants
     if word0.endswith("ies"):
