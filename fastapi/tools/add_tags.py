@@ -24,7 +24,7 @@ def seed_initial_tags(db: Session) -> list["Tag"]:
         "None", "Tech", "Economy", "Science", "Art",
         "History", "Politics", "Environment", "Health", "Sports",
         "Fashion", "Media", "Literature", "Education", "Society",
-        "Laws", "Travel", "No"
+        "Laws", "Travel"
     ]
 
     existing = {t[0] for t in db.query(Tag.name).all()}

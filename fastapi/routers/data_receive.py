@@ -7,6 +7,7 @@ import schemas2
 import models
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, select
 import datetime as dt
 
 
@@ -21,33 +22,39 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/receive_data")
-def receive_data(data: schemas2.Receive_data, db: Session = Depends(get_db)):
-    return data
 
 
 
+# routers/learning_logs.py  –  NEW VERSION
+
+
+
+
+
+# ─────────────────────── new response models ──────────────
+class AdditionalInformation(schemas2.BaseModel):
+    word_book_id: Optional[int]
+    daily_goal: int
+    learning_proportion: float
+    learned_proportion: float
+
+
+class DailyLogsWithInfoOut(schemas2.BaseModel):
+    logs: list[schemas2.LearningLogDetailOut]
+    additional_information: AdditionalInformation
+
+
+# ─────────────────────────── route ────────────────────────
 @router.get(
     "/daily_learning_logs/{user_id}",
-    response_model=list[schemas2.LearningLogDetailOut],
-    summary="Return today's (or specified) learning-log rows for a user",
+    response_model=DailyLogsWithInfoOut,
+    summary="Return today's learning-logs plus user-level info",
 )
-def read_learning_logs(
-    user_id: int,
-    date: Optional[str] = "2025-06-18",                # ← query-param, optional
-    db: Session = Depends(get_db),
-):
-    # 1️⃣  pick the date
-    if date is None:
-        # target_date = dt.date.today()
-        target_date = dt.date.today()
-    else:
-        try:
-            target_date = dt.date.fromisoformat(date)
-        except ValueError:
-            raise HTTPException(422, "date must be YYYY-MM-DD")
+def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
+    # 1️⃣ pick the date (today)
+    target_date = dt.date.today()
 
-    # 2️⃣  fetch rows with word lists pre-loaded
+    # 2️⃣ all logs for that user/date, with word lists eagerly loaded
     logs = (
         db.query(models.Learning_log)
           .options(
@@ -63,4 +70,67 @@ def read_learning_logs(
     if not logs:
         raise HTTPException(404, "No logs found for that user/date")
 
-    return logs
+    # 3️⃣ pull the user’s learning settings
+    setting = (
+        db.query(models.Learning_setting)
+          .filter(models.Learning_setting.user_id == user_id)
+          .first()
+    )  # Learning_setting: chosed_word_book_id & daily_goal:contentReference[oaicite:0]{index=0}
+
+    if setting is None:
+        # no settings yet ⇒ zero progress, None word_book_id
+        info = AdditionalInformation(
+            word_book_id=None,
+            daily_goal=0,
+            learning_proportion=0.0,
+            learned_proportion=0.0,
+        )
+        return {"logs": logs, "additional_information": info}
+
+    word_book_id = setting.chosed_word_book_id
+    daily_goal = setting.daily_goal
+
+    # 4️⃣ gather all word-IDs in that word-book (middle table word_wordbook_links):contentReference[oaicite:1]{index=1}
+    word_ids_subq = (
+        select(models.Word_wordbook_link.word_id)
+        .where(models.Word_wordbook_link.word_book_id == word_book_id)
+        .subquery()
+    )
+
+    total_words = db.scalar(select(func.count()).select_from(word_ids_subq)) or 0
+
+    # 5️⃣ count this user’s learning / learned words among that set (word_statuss table):contentReference[oaicite:2]{index=2}
+    if total_words == 0:
+        learning_prop = learned_prop = 0.0
+    else:
+        learning_count = db.scalar(
+            select(func.count())
+            .select_from(models.Word_status)
+            .where(
+                models.Word_status.users_id == user_id,
+                models.Word_status.words_id.in_(word_ids_subq),  # type: ignore[arg-type]
+                models.Word_status.status == "learning",
+            )
+        ) or 0
+
+        learned_count = db.scalar(
+            select(func.count())
+            .select_from(models.Word_status)
+            .where(
+                models.Word_status.users_id == user_id,
+                models.Word_status.words_id.in_(word_ids_subq),  # type: ignore[arg-type]
+                models.Word_status.status == "learned",
+            )
+        ) or 0
+
+        learning_prop = learning_count / total_words
+        learned_prop  = learned_count  / total_words
+
+    info = AdditionalInformation(
+        word_book_id=word_book_id,
+        daily_goal=daily_goal,
+        learning_proportion=learning_prop,
+        learned_proportion=learned_prop,
+    )
+
+    return {"logs": logs, "additional_information": info}

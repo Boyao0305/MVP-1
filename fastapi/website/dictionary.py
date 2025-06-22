@@ -35,8 +35,8 @@ router = APIRouter(prefix="/api")
 lemmatizer = WordNetLemmatizer()
 
 # (Optional: during startup)
-nltk.download('wordnet')
-nltk.download('omw-1.4')
+# nltk.download('wordnet')
+# nltk.download('omw-1.4')
 
 # Load dictionary
 def load_cedict_reverse(filepath="/app/website/dictionary/cedict_ts.u8"):
