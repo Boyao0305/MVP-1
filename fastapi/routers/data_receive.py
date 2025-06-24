@@ -37,7 +37,8 @@ class AdditionalInformation(schemas2.BaseModel):
     daily_goal: int
     learning_proportion: float
     learned_proportion: float
-
+    progression: int
+    total: int
 
 class DailyLogsWithInfoOut(schemas2.BaseModel):
     logs: list[schemas2.LearningLogDetailOut]
@@ -63,9 +64,11 @@ def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
           )
           .filter(
               models.Learning_log.user_id == user_id,
-              models.Learning_log.date == target_date,
-          )
-          .all()
+              models.Learning_log.date == target_date)
+        .order_by(models.Learning_log.id.desc())
+        .limit(5)
+        .all()
+
     )
     if not logs:
         raise HTTPException(404, "No logs found for that user/date")
@@ -84,6 +87,8 @@ def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
             daily_goal=0,
             learning_proportion=0.0,
             learned_proportion=0.0,
+            progression=0,
+            total=0,
         )
         return {"logs": logs, "additional_information": info}
 
@@ -122,7 +127,8 @@ def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
                 models.Word_status.status == "learned",
             )
         ) or 0
-
+        progression = (learning_count + learned_count) / 2
+        progression = round(progression)
         learning_prop = learning_count / total_words
         learned_prop  = learned_count  / total_words
 
@@ -131,6 +137,8 @@ def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
         daily_goal=daily_goal,
         learning_proportion=learning_prop,
         learned_proportion=learned_prop,
+        progression=progression,
+        total=total_words,
     )
 
     return {"logs": logs, "additional_information": info}

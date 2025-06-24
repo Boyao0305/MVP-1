@@ -16,9 +16,15 @@ from openai import AsyncOpenAI
 from starlette.concurrency import run_in_threadpool
 
 # adjust path if your models file lives elsewhere
+import random, datetime as dt
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+import models
+from collections import defaultdict
+from fastapi import HTTPException
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  Helper to convert a numeric “average_caiji” into a CEFR level
+#  Helper
 # ──────────────────────────────────────────────────────────────────────────────
 def _caiji_to_cefr(x: float) -> str:
     """Map average_caiji (1 → 6) to CEFR band."""
@@ -27,7 +33,7 @@ def _caiji_to_cefr(x: float) -> str:
     elif 3 <= x < 4: return "B1"
     elif 4 <= x < 5: return "B2"
     elif 5 <= x < 6: return "C1"
-    else:            return "C2"          # covers x ≥ 6 and any unexpected value
+    else:            return "C2"        # x ≥ 6 or anything unexpected
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -35,43 +41,58 @@ def _caiji_to_cefr(x: float) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 def create_five_learning_logs(user_id: int, db: Session) -> list[models.Learning_log]:
     """
-    1. Confirm user exists.
-    2. Fetch user's average_caiji → convert to CEFR.
-    3. Random-sample five *distinct* tags.
-    4. Insert five Learning_log rows with user_id, tag, CEFR (+ today’s date).
-    5. Return the freshly created ORM objects.
+    1. Verify user exists.
+    2. Convert user's average_caiji → CEFR.
+    3. Build the list of tags that still have *something* left to learn/review
+       for this user (Word_status ∈ {"unlearned", "learning"}).
+    4. Pick up to five tags; duplicates are allowed only if <5 eligible tags.
+    5. Insert five Learning_log rows (distinct dates+tags) and return them.
     """
-    # 1️⃣  Verify user
+    # 1️⃣  Confirm the user
     user = db.query(models.User).get(user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(404, "User not found")
 
-    # 2️⃣  Get avg_caiji → CEFR
+    # 2️⃣  CEFR from average_caiji
     setting = db.query(models.Learning_setting).get(user_id)
     if not setting:
-        raise HTTPException(status_code=404, detail="Learning_setting not found")
+        raise HTTPException(404, "Learning_setting not found")
     cefr_level = _caiji_to_cefr(setting.average_caiji)
 
-    # 3️⃣  Pull tags and pick five unique ones
-    tags = db.query(models.Tag).all()
-    if len(tags) < 5:
-        raise HTTPException(status_code=400, detail="Need at least 5 tags in the DB")
-    chosen_tags = random.sample(tags, 5)
+    # 3️⃣  Tags with at least one “unlearned” or “learning” word for this user
+    eligible_tags = (
+        db.query(models.Tag)
+          .join(models.Tag.l_words)                                   # Tag → Word
+          .join(models.Word_status,
+                and_(models.Word_status.words_id == models.Word.id,
+                     models.Word_status.users_id == user_id))
+          .filter(models.Word_status.status.in_(("unlearned", "learning")))
+          .distinct()
+          .all()
+    )
 
-    # 4️⃣  Build & insert logs (only the required columns)
+    if not eligible_tags:       # nothing left to study/review
+        raise HTTPException(400, "No tag has words left in 'unlearned' or 'learning' status")
+
+    # 4️⃣  Choose five tags (repeat only if <5 distinct ones)
+    chosen_tags = random.sample(eligible_tags, min(5, len(eligible_tags)))
+    while len(chosen_tags) < 5:
+        chosen_tags.append(random.choice(eligible_tags))  # deliberately allow repeats
+
+    # 5️⃣  Build & insert the logs
     today = dt.date.today()
     new_logs = [
         models.Learning_log(
             user_id=user_id,
-            tag=tag.name,      # or tag_id=tag.id if you store FK instead of text
-            CEFR=cefr_level,   # ← the newly-derived CEFR label
-            date=today         # lets you later filter by “today’s” logs if needed
+            tag=tag.name,
+            CEFR=cefr_level,
+            date=today
         )
         for tag in chosen_tags
     ]
 
     db.add_all(new_logs)
-    db.commit()                 # generates primary keys
+    db.commit()
     for log in new_logs:
         db.refresh(log)
 
@@ -99,32 +120,47 @@ _CEFR_RANK = {"A1": 0, "A2": 1, "B1": 2, "B2": 3, "C1": 4, "C2": 5}
 def _higher_cefr(w_lvl: str, base: str) -> bool:
     return _CEFR_RANK.get(w_lvl, -1) >= _CEFR_RANK.get(base, -1)
 
-def assign_daily_new_words(user_id: int, db: Session) -> dict[int, list[int]]:
-    """Populate today’s five Learning_log rows with <daily_goal> random, *unlearned* words."""
-    today = dt.date.today()
+import random, datetime as dt
+from collections import defaultdict
+from sqlalchemy.orm import joinedload, Session
+from fastapi import HTTPException
+import models
 
-    # 1️⃣  Learning-setting → daily_goal + chosen word-book
+# ──────────────────────────────────────────────────────────────────────────────
+def assign_daily_new_words(user_id: int, db: Session) -> dict[int, list[int]]:
+    """
+    For each of today’s five newest Learning_log rows:
+      • pick ⌊daily_goal/2⌋ words tagged like the log,
+      • pick the remaining words from tag == 'None',
+      • priority: unlearned → learning,
+      • obey same-book & higher-CEFR rules,
+      • allow shortage (log may end up with < daily_goal words).
+    """
+    today = dt.date.today()
+    words_variable = 10
+    # 1️⃣  Read daily_goal and chosen word-book
     setting = db.query(models.Learning_setting).get(user_id)
     if not setting:
-        raise HTTPException(status_code=404, detail="Learning_setting not found")
-    daily_goal, word_book_id = setting.daily_goal, setting.chosed_word_book_id
+        raise HTTPException(404, "Learning_setting not found")
+    daily_goal, word_book_id = words_variable, setting.chosed_word_book_id
     if word_book_id is None:
-        raise HTTPException(status_code=400, detail="No word-book chosen for user")
+        raise HTTPException(400, "No word-book chosen for user")
 
-    # 2️⃣  Fetch the five logs created earlier today
+    # 2️⃣  Get *today’s* five most-recent logs (by id DESC)
     logs = (
         db.query(models.Learning_log)
           .options(joinedload(models.Learning_log.daily_new_words))
           .filter(models.Learning_log.user_id == user_id,
                   models.Learning_log.date == today)
+          .order_by(models.Learning_log.id.desc())
+          .limit(5)
           .all()
     )
-    if len(logs) != 5:
-        raise HTTPException(status_code=400,
-                            detail=f"Expected 5 logs today, found {len(logs)}")
+    if len(logs) < 5:
+        raise HTTPException(400, f"Need 5 logs for today, found {len(logs)}")
 
-    # 3️⃣  Pull ALL Word_status rows for this user (eager-join to Word, tags, books)
-    word_status_rows = (
+    # 3️⃣  Load Word_status rows (both UNLEARNED & LEARNING)
+    ws_rows = (
         db.query(models.Word_status)
           .join(models.Word)
           .options(
@@ -132,96 +168,241 @@ def assign_daily_new_words(user_id: int, db: Session) -> dict[int, list[int]]:
               joinedload(models.Word_status.l_words).joinedload(models.Word.l_word_books),
           )
           .filter(models.Word_status.users_id == user_id,
-                  models.Word_status.status == "unlearned")     # ← **new filter**
+                  models.Word_status.status.in_(("unlearned", "learning")))
           .all()
     )
 
-    # 4️⃣  Build {tag → [Word,…]} pool, but only unlearned words pass through
-    pool_by_tag = {}
-    for ws in word_status_rows:
-        word = ws.l_words
+    # 4️⃣  Build multi-level pools: pool[status][tag] = [Word,…]
+    pool = defaultdict(lambda: defaultdict(list))          # status → tag → list
+    for ws in ws_rows:
+        status = ws.status            # 'unlearned' / 'learning'
+        word   = ws.l_words
         for tag in word.l_tags:
-            pool_by_tag.setdefault(tag.name, []).append(word)
+            pool[status][tag.name].append(word)
 
-    # 5️⃣  Select and link words for each log
-    assigned: dict[int, list[int]] = {}
-    for log in logs:
-        candidates = [
-            w for w in pool_by_tag.get(log.tag, [])
+    # 5️⃣  Helper to filter pools by book / CEFR / duplicates
+    def _candidates(words, log):
+        return [
+            w for w in words
             if any(wb.id == word_book_id for wb in w.l_word_books)
                and _higher_cefr(w.CEFR, log.CEFR)
                and w not in log.daily_new_words
         ]
-        if not candidates:
-            raise HTTPException(400, f"No suitable words for log {log.id} (tag={log.tag})")
 
-        selected = random.sample(candidates, min(daily_goal//2, len(candidates)))
-        log.daily_new_words.extend(selected)      # inserts into daily_new_word_links
-        assigned[log.id] = [w.id for w in selected]
+    # 6️⃣  Select for each log
+    assigned: dict[int, list[int]] = {}
+
+    for log in logs:
+        tag_half  = daily_goal // 2                   # from the log’s own tag
+        none_half = daily_goal - tag_half            # from tag 'None'
+        selected: list[models.Word] = []
+        already   = set()                            # ids picked for this log
+
+        # ------- inner helper -------------------------------------------------
+        def _pick(tag_name, quota):
+            """Return <= quota words from the given tag, respecting priority."""
+            out: list[models.Word] = []
+
+            if quota <= 0:
+                return out
+
+            # first UNLEARNED
+            pool_unl  = _candidates(pool["unlearned" ].get(tag_name, []), log)
+            need      = min(quota, len(pool_unl))
+            if need:
+                out.extend(random.sample(pool_unl, need))
+                quota -= need
+
+            # then LEARNING
+            if quota > 0:
+                pool_lear = _candidates(pool["learning"].get(tag_name, []), log)
+                # remove duplicates already selected
+                pool_lear = [w for w in pool_lear if w.id not in already]
+                need      = min(quota, len(pool_lear))
+                if need:
+                    out.extend(random.sample(pool_lear, need))
+
+            return out
+        # ----------------------------------------------------------------------
+
+        # (A) words from the log’s tag
+        tag_words = _pick(log.tag, tag_half)
+        selected += tag_words
+        already  |= {w.id for w in tag_words}
+
+        # (B) words from the 'None' tag
+        none_words = _pick("None", none_half)
+        # avoid duplicates in the unlikely event the same word has both tags
+        none_words = [w for w in none_words if w.id not in already]
+        selected  += none_words
+
+        # (C) link whatever we managed to collect
+        if selected:
+            log.daily_new_words.extend(selected)
+        assigned[log.id] = [w.id for w in selected]   # may be < daily_goal
 
     db.commit()
     return assigned
+from sqlalchemy import func
 
 def assign_daily_review_words(user_id: int, db: Session) -> Dict[int, List[models.Word_status]]:
     """
-    • For each of today’s 5 Learning_log rows:
-        – find 'learning' words with the same tag AND in the chosen word-book
-        – sort by learning_factor ↑ and take daily_goal // 2
-        – link them via daily_review_word_links
-    • Returns {learning_log_id: [Word_status, …]}.
+    For each of today’s 5 newest Learning_log rows:
+
+      • quota = ⌊daily_goal/2⌋ words with tag == log.tag
+      • remainder from tag == 'None'
+
+      • If TOTAL Learning_log rows  >= 20
+            – 'learning' words first, then 'unlearned'
+            – within each status bucket choose smallest learning_factor,
+              but break ties **randomly**
+      • If TOTAL Learning_log rows  < 20
+            – tag == log.tag  follows the same rule as above
+            – tag == 'None'  → IGNORE status 'learning'; pick only
+              unlearned words **randomly** (no learning-factor ordering)
+
+      • Always honour:
+          – same word-book
+          – no duplicates already linked to the log
+          – graceful shortage (log may end up with < daily_goal words)
+
+      • Returns {log_id: [Word_status, …]}
     """
     today = dt.date.today()
 
-    # 1️⃣  pull setting to get daily_goal and chosen word-book
+    # 1️⃣  settings
     setting = db.query(models.Learning_setting).get(user_id)
     if not setting:
         raise HTTPException(404, "Learning_setting not found")
-    daily_goal = setting.daily_goal or 0
-    wb_id     = setting.chosed_word_book_id
+    daily_goal = 10
+    wb_id      = setting.chosed_word_book_id
     if wb_id is None:
         raise HTTPException(400, "User has no chosen word-book")
 
-    # 2️⃣  fetch today’s five logs
+    # ── total Learning_log rows decides None-tag policy ───────────────────────
+    total_logs = (
+        db.query(func.count(models.Learning_log.id))
+          .filter(models.Learning_log.user_id == user_id)
+          .scalar()
+    )
+    allow_learning_in_none = total_logs >= 20     # <20 ⇒ only UNLEARNED for tag 'None'
+
+    # 2️⃣  today’s five newest logs
     logs = (
         db.query(models.Learning_log)
           .options(joinedload(models.Learning_log.daily_review_words))
           .filter(models.Learning_log.user_id == user_id,
                   models.Learning_log.date == today)
+          .order_by(models.Learning_log.id.desc())
+          .limit(5)
           .all()
     )
-    if len(logs) != 5:
-        raise HTTPException(400, f"Expected 5 logs today, found {len(logs)}")
+    if len(logs) < 5:
+        raise HTTPException(400, f"Need 5 logs for today, found {len(logs)}")
 
+    # 3️⃣  Word_status rows (learning + unlearned) in the chosen word-book
+    ws_rows = (
+        db.query(models.Word_status)
+          .join(models.Word)
+          .join(models.Word.l_word_books)
+          .options(joinedload(models.Word_status.l_words).joinedload(models.Word.l_tags))
+          .filter(models.Word_status.users_id == user_id,
+                  models.Word_book.id == wb_id,
+                  models.Word_status.status.in_(("learning", "unlearned")))
+          .all()
+    )
+
+    # 4️⃣  pool[status][tag]  (unsorted – we’ll order / shuffle at pick-time)
+    pool = defaultdict(lambda: defaultdict(list))       # status → tag → list[Word_status]
+    for ws in ws_rows:
+        for tag in ws.l_words.l_tags:
+            pool[ws.status][tag.name].append(ws)
+
+    # 5️⃣  helper ----------------------------------------------------------------
+    def _ordered_then_random(cands: List[models.Word_status]) -> List[models.Word_status]:
+        """
+        Return candidates ordered by (learning_factor, random) so ties are randomised.
+        """
+        return sorted(
+            cands,
+            key=lambda ws: (ws.learning_factor or 0.0, random.random())
+        )
+
+    def _pick(
+        tag_name: str,
+        quota: int,
+        already_word_ids: set[int],
+        allow_learning: bool,
+        random_unlearned: bool
+    ) -> List[models.Word_status]:
+        picked: List[models.Word_status] = []
+
+        # (a) status = learning
+        if allow_learning and quota > 0:
+            candidates = [
+                ws for ws in pool["learning"].get(tag_name, [])
+                if ws.l_words.id not in already_word_ids
+            ]
+            candidates = _ordered_then_random(candidates)
+            need = min(quota, len(candidates))
+            picked.extend(candidates[:need])
+            quota -= need
+
+        # (b) status = unlearned
+        if quota > 0:
+            candidates = [
+                ws for ws in pool["unlearned"].get(tag_name, [])
+                if ws.l_words.id not in already_word_ids
+            ]
+            if random_unlearned:
+                random.shuffle(candidates)                 # pure random
+            else:
+                candidates = _ordered_then_random(candidates)
+            need = min(quota, len(candidates))
+            picked.extend(candidates[:need])
+
+        return picked
+    # ---------------------------------------------------------------------------
+
+    # 6️⃣  select & link
     result: Dict[int, List[models.Word_status]] = {}
 
     for log in logs:
-        # 3️⃣  candidate Word_status rows for this tag
-        qs = (
-            db.query(models.Word_status)
-              .join(models.Word)                                    # ws.l_words alias
-              .join(models.Word.l_word_books)
-              .join(models.Word.l_tags)
-              .filter(
-                  models.Word_status.users_id == user_id,
-                  models.Word_status.status == "learning",
-                  models.Word_book.id == wb_id,
-                  models.Tag.name == log.tag,
-              )
-              .order_by(models.Word_status.learning_factor.asc())
-              .limit(max(0, daily_goal // 2))
-              .all()
-        )
+        tag_quota  = daily_goal
+        none_quota = daily_goal
+        already_ids = {w.id for w in log.daily_review_words}
+        selected_ws: List[models.Word_status] = []
 
-        # 4️⃣  link – avoid duplicates on rerun
-        for ws in qs:
+        # (A) same-tag words – always allow learning, use ordered-random ties
+        ws_tag = _pick(
+            tag_name=log.tag,
+            quota=tag_quota,
+            already_word_ids=already_ids,
+            allow_learning=True,
+            random_unlearned=False
+        )
+        selected_ws.extend(ws_tag)
+        already_ids.update(ws.l_words.id for ws in ws_tag)
+
+        # (B) 'None'-tag words – behaviour depends on total_logs
+        ws_none = _pick(
+            tag_name="None",
+            quota=none_quota,
+            already_word_ids=already_ids,
+            allow_learning=allow_learning_in_none,        # False if <20 logs
+            random_unlearned=not allow_learning_in_none   # True  if <20 logs
+        )
+        selected_ws.extend(ws_none)
+
+        # (C) link to the log (avoid dupes on re-run)
+        for ws in selected_ws:
             if ws.l_words not in log.daily_review_words:
                 log.daily_review_words.append(ws.l_words)
 
-        result[log.id] = qs
+        result[log.id] = selected_ws        # may be shorter than daily_goal
 
     db.commit()
     return result
-
 from openai import OpenAI
 
 # build once per worker
@@ -262,9 +443,10 @@ async def generate_outlines_for_date_async(
               )
               .filter(
                   models.Learning_log.user_id == user_id,
-                  models.Learning_log.date == for_date,
-              )
-              .all()
+                  models.Learning_log.date == for_date,)
+            .order_by(models.Learning_log.id.desc())
+            .limit(5)
+            .all()
         )
     )
 

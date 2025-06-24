@@ -25,8 +25,8 @@ def promote_unlearned_per_tag(
               joinedload(models.Word_status.l_words).joinedload(models.Word.l_word_books),
           )
           .filter(
-              models.Word_status.users_id == user_id,
-              models.Word_status.status == "unlearned"
+              models.Word_status.users_id == user_id
+              # models.Word_status.status == "unlearned"
           )
           .all()
     )

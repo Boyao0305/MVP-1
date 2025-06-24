@@ -59,12 +59,20 @@ class LearningLog(LearningLogBase):
 
 
 # select new words
+class Statusbase(BaseModel):
+    status:str
+    learning_factor: float
+class Tagbase(BaseModel):
+    name: str
+
 class WordOut(BaseModel):
     id: int
     word: str
     definition: Optional[str] = None
     CEFR: Optional[str] = None
     phonetic: Optional[str] = None
+    # tags: List[Tagbase] = Field(..., alias="l_tags")
+    # status: List[Statusbase] = Field(..., alias="l_word_statuss")
 
     class Config:
         orm_mode = True
@@ -79,6 +87,18 @@ class LogWithWords(BaseModel):
 
     # “words” is just a nicer name for the relationship `daily_new_words`
     words: List[WordOut] = Field(..., alias="daily_new_words")
+
+    class Config:
+        orm_mode = True
+        allow_population_by_field_name = True   # lets FastAPI return `words`
+class LogWithWordsreview(BaseModel):
+    id: int                                # ← maps directly to Learning_log.id
+    tag: str
+    CEFR: Optional[str] = None
+    date: Optional[datetime.date] = None
+
+    # “words” is just a nicer name for the relationship `daily_new_words`
+    words: List[WordOut] = Field(..., alias="daily_review_words")
 
     class Config:
         orm_mode = True

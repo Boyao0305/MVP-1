@@ -157,3 +157,23 @@ class NewWordLinkRequest(BaseModel):
 class ReviewWordLinkRequest(BaseModel):
     learning_log_id: int
     word_id: int
+
+
+# test
+class WordStatusOut(BaseModel):
+    id: int
+    word: str
+    CEFR: Optional[str] = None
+    status: Optional[str] = None          # ← NEW
+    learning_factor: float = Field(0.0)   # default when no row exists
+
+    class Config:
+        orm_mode = True
+
+
+class TagWordsStatusOut(BaseModel):
+    tag: str
+    words: List[WordStatusOut]
+
+    class Config:
+        orm_mode = True

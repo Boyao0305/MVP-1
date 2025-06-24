@@ -250,50 +250,68 @@ def generate_and_read_daily_words(user_id: int, db: Session = Depends(get_db)):
     today = dt.date.today()
     logs = (
         db.query(models.Learning_log)
-          .options(joinedload(models.Learning_log.daily_new_words))
-          .filter(models.Learning_log.user_id == user_id,
-                  models.Learning_log.date == today)
-          .all()
+        .options(joinedload(models.Learning_log.daily_new_words))
+        .filter(models.Learning_log.user_id == user_id,
+                models.Learning_log.date == today)
+        .order_by(models.Learning_log.id.desc())  # newest first
+        .limit(5)
+        .all()
     )
 
-    if len(logs) != 5:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Expected 5 learning-logs for today but found {len(logs)}."
-        )
-
+    if len(logs) < 5:
+        raise HTTPException(400, f"Need 5 logs for today, found {len(logs)}")
     # 3️⃣  FastAPI + orm_mode → automatic conversion to LogWithWords
     return logs
 @router.post(
     "/daily_review_words/{user_id}",
-    response_model=list[schemas2.ReviewTagOut],
+    response_model=list[schemas2.LogWithWordsreview],
     summary="Pick lowest-factor review words per tag and link them"
 )
-def daily_review_words(user_id: int, db: Session = Depends(get_db)):
-    promoted = assign_daily_review_words(user_id, db)   # id → [Word_status]
 
-    # build response
-    out: list[schemas2.ReviewTagOut] = []
-    for log_id, ws_rows in promoted.items():
-        if not ws_rows:
-            continue
-        tag = ws_rows[0].l_words.l_tags[0].name  # each row shares the same tag
-        out.append(
-            schemas2.ReviewTagOut(
-                learning_log_id=log_id,
-                tag=tag,
-                words=[
-                    schemas2.ReviewWordOut(
-                        id=ws.l_words.id,
-                        word=ws.l_words.word,
-                        CEFR=ws.l_words.CEFR,
-                        learning_factor=ws.learning_factor,
-                    )
-                    for ws in ws_rows
-                ],
-            )
-        )
-    return out
+def generate_and_read_daily_review_words(user_id: int, db: Session = Depends(get_db)):
+    assign_daily_review_words(user_id, db)
+
+    # 2️⃣  read fresh data back
+    today = dt.date.today()
+    logs = (
+        db.query(models.Learning_log)
+        .options(joinedload(models.Learning_log.daily_review_words))
+        .filter(models.Learning_log.user_id == user_id,
+                models.Learning_log.date == today)
+        .order_by(models.Learning_log.id.desc())  # newest first
+        .limit(5)
+        .all()
+    )
+
+    if len(logs) < 5:
+        raise HTTPException(400, f"Need 5 logs for today, found {len(logs)}")
+    # 3️⃣  FastAPI + orm_mode → automatic conversion to LogWithWords
+    return logs
+# def daily_review_words(user_id: int, db: Session = Depends(get_db)):
+#     promoted = assign_daily_review_words(user_id, db)   # id → [Word_status]
+#
+#     # build response
+#     out: list[schemas2.ReviewTagOut] = []
+#     for log_id, ws_rows in promoted.items():
+#         if not ws_rows:
+#             continue
+#         tag = ws_rows[0].l_words.l_tags[0].name  # each row shares the same tag
+#         out.append(
+#             schemas2.ReviewTagOut(
+#                 learning_log_id=log_id,
+#                 tag=tag,
+#                 words=[
+#                     schemas2.ReviewWordOut(
+#                         id=ws.l_words.id,
+#                         word=ws.l_words.word,
+#                         CEFR=ws.l_words.CEFR,
+#                         learning_factor=ws.learning_factor,
+#                     )
+#                     for ws in ws_rows
+#                 ],
+#             )
+#         )
+#     return out
 
 
 @router.post(
@@ -356,3 +374,53 @@ def read_learning_logs(
         raise HTTPException(404, "No logs found for that user/date")
 
     return logs
+from sqlalchemy import select, outerjoin
+@router.get(
+    "/tags/{tag_name}/words/{user_id}",
+    response_model=schemas.TagWordsStatusOut,
+    summary="Return every word linked to a tag with that user’s status",
+)
+def words_by_tag_with_status(
+    tag_name: str,
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    # 1) locate the tag
+    tag = db.execute(
+        select(models.Tag).where(models.Tag.name == tag_name)
+    ).scalar_one_or_none()
+    if tag is None:
+        raise HTTPException(404, "Tag not found")
+
+    # 2) join words ←→ tag  +  OUTER join to word_statuss for *this* user
+    stmt = (
+        select(
+            models.Word,                      # full Word ORM object
+            models.Word_status.status,
+            models.Word_status.learning_factor,
+        )
+        .join(models.Word_tag_link,
+              models.Word_tag_link.word_id == models.Word.id)
+        .where(models.Word_tag_link.tag_id == tag.id)
+        .outerjoin(                          # may be NULL if user never touched it
+            models.Word_status,
+            (models.Word_status.words_id == models.Word.id)
+            & (models.Word_status.users_id == user_id),
+        )
+    )
+
+    rows = db.execute(stmt).all()
+
+    # 3) build DTO list (use defaults when no status row exists)
+    words_out = [
+        schemas.WordStatusOut(
+            id=w.id,
+            word=w.word,
+            CEFR=w.CEFR,
+            status=s if s is not None else "unlearned",
+            learning_factor=lf if lf is not None else 0.0,
+        )
+        for w, s, lf in rows
+    ]
+
+    return {"tag": tag.name, "words": words_out}
