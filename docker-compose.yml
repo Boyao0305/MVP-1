@@ -37,13 +37,13 @@ services:
       mynetwork:
         ipv4_address: 172.28.0.3  # 为 FastAPI 容器指定静态 IP 地址
 
-#  static-site:
-#    build: ./static-site       # see Dockerfile below
-#    container_name: static-site
-#    depends_on: [fastapi-app]
-#    networks:
-#      mynetwork:
-#        ipv4_address: 172.28.0.5
+  static-site:
+    build: ./static-site       # see Dockerfile below
+    container_name: static-site
+    depends_on: [fastapi-app]
+    networks:
+      mynetwork:
+        ipv4_address: 172.28.0.5
 
   nginx:
     build: ./nginx
@@ -51,9 +51,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro # 挂载 Nginx 配置文件
-#    depends_on: [fastapi-app, static-site]
-    depends_on:
-      - fastapi-app
+    depends_on: [fastapi-app, static-site]
     ports:
       - "80:80"
       - "443:443"
