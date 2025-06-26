@@ -111,7 +111,7 @@ def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
         .where(models.Word_wordbook_link.word_book_id == word_book_id)
         .subquery()
     )
-
+    progression1 = 0
     total_words = db.scalar(select(func.count()).select_from(word_ids_subq)) or 0
 
     # 5️⃣ count this user’s learning / learned words among that set (word_statuss table):contentReference[oaicite:2]{index=2}
@@ -137,17 +137,19 @@ def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
                 models.Word_status.status == "learned",
             )
         ) or 0
-        progression = (learning_count + learned_count) / 2
-        progression = round(progression)
+        # progression = (learning_count + learned_count) / 2
+        # progression = round(progression)
+        progression1 = learning_count + learned_count
         learning_prop = learning_count / total_words
         learned_prop  = learned_count  / total_words
+
 
     info = AdditionalInformation(
         word_book_id=word_book_id,
         daily_goal=daily_goal,
         learning_proportion=learning_prop,
         learned_proportion=learned_prop,
-        progression=progression,
+        progression=progression1,
         total=total_words,
     )
 
@@ -412,11 +414,15 @@ def review_update(
             continue
         if ws.status == "learning":
 
-            ws.learning_factor = min(ws.learning_factor + 0.5, 1.0)
-            touched += 1
-            if ws.learning_factor >= 0.9:
-                ws.status = "learned"
-                promoted += 1
+            if link.review_indicator == 0:
+
+                ws.learning_factor = min(ws.learning_factor + 0.5, 1.0)
+                touched += 1
+                if ws.learning_factor >= 0.9:
+                    ws.status = "learned"
+                    promoted += 1
+            else:
+                continue
         if ws.status == "unlearned":
             ws.status = "learning"
             started += 1

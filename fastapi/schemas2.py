@@ -71,8 +71,8 @@ class WordOut(BaseModel):
     definition: Optional[str] = None
     CEFR: Optional[str] = None
     phonetic: Optional[str] = None
-    # tags: List[Tagbase] = Field(..., alias="l_tags")
-    # status: List[Statusbase] = Field(..., alias="l_word_statuss")
+    tags: List[Tagbase] = Field(..., alias="l_tags")
+    status: List[Statusbase] = Field(..., alias="l_word_statuss")
 
     class Config:
         orm_mode = True

@@ -170,7 +170,7 @@ def get_new_word(learning_log_id: int, db: Session = Depends(get_db)):
         result.append(words.word)
     return {log}
 
-@router.get("/word/{word_id}", response_model=schemas.Wordget)
+@router.get("/word/{word_id}", response_model=schemas2.WordOut)
 def get_new_word(word_id: int, db: Session = Depends(get_db)):
     log = db.query(models.Word).filter(models.Word.id == word_id).first()
     return log
@@ -421,3 +421,74 @@ def words_by_tag_with_status(
     ]
 
     return {"tag": tag.name, "words": words_out}
+
+
+@router.get(
+    "/users/{user_id}/learning-words",
+       # change to your own schema type
+    summary="Return all words currently in 'learning' status for the user",
+)
+def read_learning_words(
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    1️⃣  Join **Word** ←→ **Word_status**.
+    2️⃣  Keep rows where `Word_status.users_id == user_id` *and*
+        `Word_status.status == "learning"`.
+    3️⃣  Return the matching `Word` ORM objects (FastAPI → Pydantic).
+    """
+    words = (
+        db.query(models.Word)
+        .join(
+            models.Word_status,
+            (models.Word.id == models.Word_status.words_id)
+            & (models.Word_status.users_id == user_id)
+            & (models.Word_status.status == "learning")
+        )
+        .order_by(models.Word.word)          # optional: alphabetical
+        .all()
+    )
+
+    if not words:
+        raise HTTPException(
+            status_code=404,
+            detail="No words with status 'learning' found for this user",
+        )
+
+    return words
+
+@router.get(
+    "/users/{user_id}/learned-words",
+       # change to your own schema type
+    summary="Return all words currently in 'learning' status for the user",
+)
+def read_learning_words(
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    1️⃣  Join **Word** ←→ **Word_status**.
+    2️⃣  Keep rows where `Word_status.users_id == user_id` *and*
+        `Word_status.status == "learning"`.
+    3️⃣  Return the matching `Word` ORM objects (FastAPI → Pydantic).
+    """
+    words = (
+        db.query(models.Word)
+        .join(
+            models.Word_status,
+            (models.Word.id == models.Word_status.words_id)
+            & (models.Word_status.users_id == user_id)
+            & (models.Word_status.status == "learned")
+        )
+        .order_by(models.Word.word)          # optional: alphabetical
+        .all()
+    )
+
+    if not words:
+        raise HTTPException(
+            status_code=404,
+            detail="No words with status 'learned' found for this user",
+        )
+
+    return words

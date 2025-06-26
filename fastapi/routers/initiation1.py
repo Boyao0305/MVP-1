@@ -188,12 +188,12 @@ async def run_daily_pipeline(
 #     return setting
 #
 #
-# @router.post("/set_daily_goal/{user_id}/{goal}", response_model=schemas.Learning_settings)
-# def set_daily_goal(user_id: int, goal: int, db: Session = Depends(get_db)):
-#     setting = db.query(models.Learning_setting).filter(models.Learning_setting.user_id == user_id).first()
-#     if not setting:
-#         raise HTTPException(status_code=404, detail="Learning setting not found for this user")
-#     setting.daily_goal = goal
-#     db.commit()
-#     db.refresh(setting)
-#     return setting
+@router.post("/set_daily_goal/{user_id}/{goal}", response_model=schemas.Learning_settings)
+def set_daily_goal(user_id: int, goal: int, db: Session = Depends(get_db)):
+    setting = db.query(models.Learning_setting).filter(models.Learning_setting.user_id == user_id).first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Learning setting not found for this user")
+    setting.daily_goal = goal
+    db.commit()
+    db.refresh(setting)
+    return setting
