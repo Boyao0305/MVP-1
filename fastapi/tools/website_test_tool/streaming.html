@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Streaming POST API Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #output { white-space: pre-wrap; background: #f4f4f4; padding: 10px; border: 1px solid #ccc; max-height: 500px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Streaming POST API Test</h1>
+  <button onclick="startStreaming()">Start Stream</button>
+  <div id="output"></div>
+
+  <script>
+    async function startStreaming() {
+      const output = document.getElementById('output');
+      output.textContent = 'Sending POST and waiting for stream...\n';
+
+      try {
+        const response = await fetch('http://localhost/api/generation/5/380', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({}) // Include body data here if required by the API
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            output.textContent += '\n[Stream Ended]';
+            break;
+          }
+          const chunk = decoder.decode(value, { stream: true });
+          output.textContent += chunk;
+        }
+
+      } catch (error) {
+        output.textContent += `\nError: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

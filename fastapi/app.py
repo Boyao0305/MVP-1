@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth,data_receive
+from routers import initiation1, routine
 
 from website import api1,generation, dictionary
 from tools.English_specialist_api import composition_word
@@ -19,15 +19,15 @@ app.add_middleware(
 )
 
 
-app.include_router(auth.router)
+app.include_router(initiation1.router)
 
 
 app.include_router(test.router)
-app.include_router(data_receive.router)
+app.include_router(routine.router)
 app.include_router(service_router.router)
 app.include_router(api1.router)
 app.include_router(generation.router)
-app.include_router(dictionary.router)
+# app.include_router(dictionary.router)
 app.include_router(composition_word.router)
 
 # @app.get("/")

@@ -1,20 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Form,Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from crud.auth import authenticate_user, register_user
-from datetime import date
-from pydantic import BaseModel
+from functions.auth import authenticate_user, register_user
 import schemas
 import datetime as dt
 import schemas2
-from fastapi.responses import JSONResponse
 import models
 from sqlalchemy.orm import joinedload
 from functions.new_session import create_five_learning_logs, assign_daily_new_words,assign_daily_review_words, generate_outlines_for_date_async
 
 from typing import List, Optional
 from sqlalchemy.sql.expression import func
-import asyncio
+
 router = APIRouter(prefix="/api")
 
 def get_db():
@@ -171,7 +168,7 @@ def get_new_word(learning_log_id: int, db: Session = Depends(get_db)):
     result = []
     for words in log.daily_new_words:
         result.append(words.word)
-    return {"word":result}
+    return {log}
 
 @router.get("/word/{word_id}", response_model=schemas.Wordget)
 def get_new_word(word_id: int, db: Session = Depends(get_db)):

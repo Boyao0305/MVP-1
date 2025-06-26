@@ -10,7 +10,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    phone_number = Column(String(255), nullable=False)
+    phone_number = Column(String(255), nullable=True)
     membership = Column(Integer, default=False)
     consecutive_learning = Column(Integer, nullable=False, default=0)
 
@@ -19,6 +19,12 @@ class User(Base):
     l_learning_setting = relationship("Learning_setting", back_populates="l_user", uselist=False)
 
     l_learning_logs = relationship("Learning_log", back_populates="l_user")
+
+class Invitation_code(Base):
+    __tablename__ = "invitation_codes"
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(255), unique=True, index=True, nullable=False)
+    code_status = Column(Integer, nullable=False, default=0)
 
 class Word(Base):
     __tablename__ = "words"
@@ -103,8 +109,9 @@ class Learning_log(Base):
     date = Column(Date, nullable=True)
     english_title = Column(String(255), nullable=True)
     chinese_title = Column(String(255), nullable=True)
-    outline = Column(String(1024), nullable=True)
+    outline = Column(String(4096), nullable=True)
     artical = Column(Text, nullable=True)
+    appreciation = Column(Integer, nullable=True)
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     l_user = relationship("User", back_populates="l_learning_logs")
@@ -124,4 +131,5 @@ class Daily_review_word_link(Base):
 
     learning_log_id = Column(Integer, ForeignKey("learning_logs.id"), primary_key=True)
     word_id = Column(Integer, ForeignKey("words.id"), primary_key=True)
+    review_indicator = Column(Integer, default=0)
 

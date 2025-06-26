@@ -1,31 +1,95 @@
 import random
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-import models      # adjust import paths as needed
+   # adjust import paths as needed
 import asyncio
-import random
 import os, datetime as dt
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
-import models
 from typing import Dict, List
 from sqlalchemy.orm import Session, joinedload
-from openai import OpenAI
+from database import SessionLocal
+from functions.auth import authenticate_user, register_user
 import json,re
 from openai import AsyncOpenAI
 from starlette.concurrency import run_in_threadpool
-
-# adjust path if your models file lives elsewhere
-import random, datetime as dt
-from sqlalchemy import and_
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-import models
-from collections import defaultdict
-from fastapi import HTTPException
+import models, schemas
+import datetime as dt
+from sqlalchemy import and_
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  Helper
 # ──────────────────────────────────────────────────────────────────────────────
+
+
+def assign_word_book(
+    user_id: int,
+    word_book_id: int,
+    db: Session = Depends(get_db),
+):
+    # 1️⃣  Get the learning-setting row (one-to-one with user)
+    setting = (
+        db.query(models.Learning_setting)
+        .filter(models.Learning_setting.user_id == user_id)
+        .first()
+    )
+    if not setting:
+        raise HTTPException(
+            status_code=404, detail="Learning setting not found for this user"
+        )
+
+    # 2️⃣  Make sure the chosen word-book exists
+    word_book = (
+        db.query(models.Word_book)
+        .filter(models.Word_book.id == word_book_id)
+        .first()
+    )
+    if not word_book:
+        raise HTTPException(status_code=404, detail="Word book not found")
+
+    # 3️⃣  Update the setting
+    setting.chosed_word_book_id = word_book_id
+
+    # 4️⃣  Build the set of word-ids already linked to this user
+    existing_word_ids = {
+        wid for (wid,) in db.query(models.Word_status.words_id)
+        .filter(models.Word_status.users_id == user_id)
+        .all()
+    }
+
+    # 5️⃣  Create Word_status rows **only** for words in this word-book
+    new_status_objects = [
+        models.Word_status(
+            words_id=word.id,
+            users_id=user_id,
+            status="unlearned",           # learning_factor defaults to 0.0
+        )
+        for word in word_book.l_words
+        if word.id not in existing_word_ids
+    ]
+
+    if new_status_objects:            # bulk insert if there’s anything new
+        db.bulk_save_objects(new_status_objects)
+
+    db.commit()
+    db.refresh(setting)
+    return setting
+
+def set_daily_goal(user_id: int, goal: int, db: Session = Depends(get_db)):
+    setting = db.query(models.Learning_setting).filter(models.Learning_setting.user_id == user_id).first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Learning setting not found for this user")
+    setting.daily_goal = goal
+    db.commit()
+    db.refresh(setting)
+    return setting
+
 def _caiji_to_cefr(x: float) -> str:
     """Map average_caiji (1 → 6) to CEFR band."""
     if   1 <= x < 2: return "A1"
@@ -39,7 +103,8 @@ def _caiji_to_cefr(x: float) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 #  Main service function
 # ──────────────────────────────────────────────────────────────────────────────
-def create_five_learning_logs(user_id: int, db: Session) -> list[models.Learning_log]:
+
+def create_five_learning_logs(user_id: int, today: dt.date, db: Session) -> list[models.Learning_log]:
     """
     1. Verify user exists.
     2. Convert user's average_caiji → CEFR.
@@ -80,7 +145,7 @@ def create_five_learning_logs(user_id: int, db: Session) -> list[models.Learning
         chosen_tags.append(random.choice(eligible_tags))  # deliberately allow repeats
 
     # 5️⃣  Build & insert the logs
-    today = dt.date.today()
+
     new_logs = [
         models.Learning_log(
             user_id=user_id,
@@ -120,14 +185,14 @@ _CEFR_RANK = {"A1": 0, "A2": 1, "B1": 2, "B2": 3, "C1": 4, "C2": 5}
 def _higher_cefr(w_lvl: str, base: str) -> bool:
     return _CEFR_RANK.get(w_lvl, -1) >= _CEFR_RANK.get(base, -1)
 
-import random, datetime as dt
+
 from collections import defaultdict
 from sqlalchemy.orm import joinedload, Session
 from fastapi import HTTPException
 import models
 
 # ──────────────────────────────────────────────────────────────────────────────
-def assign_daily_new_words(user_id: int, db: Session) -> dict[int, list[int]]:
+def assign_daily_new_words(user_id: int, today: dt.date, db: Session) -> dict[int, list[int]]:
     """
     For each of today’s five newest Learning_log rows:
       • pick ⌊daily_goal/2⌋ words tagged like the log,
@@ -136,13 +201,12 @@ def assign_daily_new_words(user_id: int, db: Session) -> dict[int, list[int]]:
       • obey same-book & higher-CEFR rules,
       • allow shortage (log may end up with < daily_goal words).
     """
-    today = dt.date.today()
     words_variable = 10
     # 1️⃣  Read daily_goal and chosen word-book
     setting = db.query(models.Learning_setting).get(user_id)
     if not setting:
         raise HTTPException(404, "Learning_setting not found")
-    daily_goal, word_book_id = words_variable, setting.chosed_word_book_id
+    daily_goal, word_book_id = 10, setting.chosed_word_book_id
     if word_book_id is None:
         raise HTTPException(400, "No word-book chosen for user")
 
@@ -245,7 +309,7 @@ def assign_daily_new_words(user_id: int, db: Session) -> dict[int, list[int]]:
     return assigned
 from sqlalchemy import func
 
-def assign_daily_review_words(user_id: int, db: Session) -> Dict[int, List[models.Word_status]]:
+def assign_daily_review_words(user_id: int, today: dt.date,db: Session) -> Dict[int, List[models.Word_status]]:
     """
     For each of today’s 5 newest Learning_log rows:
 
@@ -268,7 +332,7 @@ def assign_daily_review_words(user_id: int, db: Session) -> Dict[int, List[model
 
       • Returns {log_id: [Word_status, …]}
     """
-    today = dt.date.today()
+
 
     # 1️⃣  settings
     setting = db.query(models.Learning_setting).get(user_id)
@@ -418,7 +482,8 @@ PROMPT_TMPL = (
     '{{"outline":"", "english_title":"", "chinese_title":""}}'
     "）标题语言应生动且吸引人，请模仿微信公众号类似文章的标题"
 )
-
+MAX_RETRIES  = 3          # total attempts (1 original + 2 retries)
+RETRY_DELAY  = 2.0        # seconds to wait between tries
 # ───────────────────  async LLM call  ─────────────────────────
 async def _call_llm(prompt: str) -> str:
     r = await async_client.chat.completions.create(
@@ -430,55 +495,75 @@ async def _call_llm(prompt: str) -> str:
 # ───────────────────  main async helper  ──────────────────────
 async def generate_outlines_for_date_async(
     user_id: int,
-    for_date: dt.date,
+    today: dt.date,
     db: Session,
 ) -> List[Dict]:
-    # 1️⃣ fetch logs (blocking) in a thread
-    logs = await run_in_threadpool(
-        lambda: (
-            db.query(models.Learning_log)
-              .options(
-                  joinedload(models.Learning_log.daily_new_words),
-                  joinedload(models.Learning_log.daily_review_words),
-              )
-              .filter(
-                  models.Learning_log.user_id == user_id,
-                  models.Learning_log.date == for_date,)
-            .order_by(models.Learning_log.id.desc())
-            .limit(5)
-            .all()
-        )
-    )
 
-    if len(logs) != 5:
-        raise HTTPException(400, f"Expected 5 logs on {for_date}, found {len(logs)}")
-
-    # 2️⃣ compose prompts
-    prompts, metas = [], []
-    for log in logs:
-        words = {w.word for w in (log.daily_new_words + log.daily_review_words)}
-        prompts.append(PROMPT_TMPL.format(words=", ".join(words)))
-        metas.append(log)
-
-    # 3️⃣ fire 5 LLM calls in parallel
-    raw_answers = await asyncio.gather(*[_call_llm(p) for p in prompts])
-
-    # 4️⃣ parse + save back into ORM objects
-    results: List[Dict] = []
-    for log, prompt, raw in zip(metas, prompts, raw_answers):
-        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.I).strip()
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            ans = json.loads(cleaned)
-        except json.JSONDecodeError:
-            ans = {"outline": raw, "english_title": "", "chinese_title": ""}
+            # ──────────────────────────────────────────────────────────────
+            # 1️⃣ fetch logs (blocking) in a thread
+            logs = await run_in_threadpool(
+                lambda: (
+                    db.query(models.Learning_log)
+                      .options(
+                          joinedload(models.Learning_log.daily_new_words),
+                          joinedload(models.Learning_log.daily_review_words),
+                      )
+                      .filter(
+                          models.Learning_log.user_id == user_id,
+                          models.Learning_log.date == today,
+                      )
+                      .order_by(models.Learning_log.id.desc())
+                      .limit(5)
+                      .all()
+                )
+            )
 
-        log.outline        = ans.get("outline", "")
-        log.english_title  = ans.get("english_title", "")
-        log.chinese_title  = ans.get("chinese_title", "")
+            if len(logs) != 5:
+                raise HTTPException(400, f"Expected 5 logs on {today}, found {len(logs)}")
 
-        results.append({"log": log, "prompt": prompt, "answer": ans})
+            # 2️⃣ compose prompts
+            prompts, metas = [], []
+            for log in logs:
+                words = {w.word for w in (log.daily_new_words + log.daily_review_words)}
+                prompts.append(PROMPT_TMPL.format(words=", ".join(words)))
+                metas.append(log)
 
-    # 5️⃣ commit once (also in a thread)
-    await run_in_threadpool(db.commit)
+            # 3️⃣ fire 5 LLM calls in parallel
+            raw_answers = await asyncio.gather(*[_call_llm(p) for p in prompts])
 
-    return results
+            # 4️⃣ parse + save back into ORM objects
+            results: List[Dict] = []
+            for log, prompt, raw in zip(metas, prompts, raw_answers):
+                cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.I).strip()
+                try:
+                    ans = json.loads(cleaned)
+                except json.JSONDecodeError:
+                    ans = {"outline": raw, "english_title": "", "chinese_title": ""}
+
+                log.outline        = ans.get("outline", "")
+                log.english_title  = ans.get("english_title", "")
+                log.chinese_title  = ans.get("chinese_title", "")
+
+                results.append({"log": log, "prompt": prompt, "answer": ans})
+
+            # 5️⃣ commit once (also in a thread)
+            await run_in_threadpool(db.commit)
+
+            return results                     # 🎉 success – exit the retry loop
+            # ──────────────────────────────────────────────────────────────
+
+        except Exception as exc:
+            # Roll back partial DB work before next try
+            await run_in_threadpool(db.rollback)
+
+            if attempt == MAX_RETRIES:
+                # No more retries left – re-raise the last error
+                raise
+
+            # Optional logging / telemetry
+            print(f"[{attempt}/{MAX_RETRIES}] generate_outlines_for_date_async failed: {exc}. Retrying…")
+
+            # Small delay to avoid hammering external services
+            await asyncio.sleep(RETRY_DELAY)
