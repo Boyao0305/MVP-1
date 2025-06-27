@@ -20,7 +20,7 @@ db = SessionLocal()
 
 
 try:
-    df = pd.read_csv('/app/tools/initiation/final_list.csv')
+    df = pd.read_csv('/app/tools/initiation/completion.csv')
 
     df = df.where(pd.notnull(df), None)
 

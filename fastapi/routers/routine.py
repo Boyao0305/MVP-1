@@ -63,22 +63,34 @@ class DailyLogsWithInfoOut(schemas2.BaseModel):
 )
 def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
     # 1️⃣ pick the date (today)
-    target_date = dt.date.today()
+    # target_date = dt.date.today()
 
     # 2️⃣ all logs for that user/date, with word lists eagerly loaded
+    # logs = (
+    #     db.query(models.Learning_log)
+    #       .options(
+    #           joinedload(models.Learning_log.daily_new_words),
+    #           joinedload(models.Learning_log.daily_review_words),
+    #       )
+    #       .filter(
+    #           models.Learning_log.user_id == user_id,
+    #           models.Learning_log.date == target_date)
+    #     .order_by(models.Learning_log.id.desc())
+    #     .limit(5)
+    #     .all()
+
+    # )
     logs = (
         db.query(models.Learning_log)
-          .options(
-              joinedload(models.Learning_log.daily_new_words),
-              joinedload(models.Learning_log.daily_review_words),
-          )
-          .filter(
-              models.Learning_log.user_id == user_id,
-              models.Learning_log.date == target_date)
+        .options(
+            joinedload(models.Learning_log.daily_new_words),
+            joinedload(models.Learning_log.daily_review_words),
+        )
+        .filter(
+            models.Learning_log.user_id == user_id)
         .order_by(models.Learning_log.id.desc())
         .limit(5)
         .all()
-
     )
     if not logs:
         raise HTTPException(404, "No logs found for that user/date")
