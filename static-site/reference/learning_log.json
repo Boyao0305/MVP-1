@@ -1,0 +1,1131 @@
+{
+    "logs": [
+      {
+        "id": 362,
+        "user_id": 5,
+        "date": "2025-06-23",
+        "tag": "Society",
+        "CEFR": "A1",
+        "english_title": "From Dynasties to Sandwiches: 16 Surprising Ways Ancient China Shapes Your Daily Life",
+        "chinese_title": "王朝与三明治的奇妙碰撞：揭秘中国十六个鲜为人知的历史日常",
+        "outline": "1. Introduction: The early days of China's last dynasty set the foundation for modern laws and social norms.  2. The king's capital was a center of culture, where flowers in the market symbolized prosperity.  3. Citizens would complain about rude behavior, leading to necessary discussions on civic care.  4. At sixteen, young scholars copied ancient texts in classrooms, recycling wisdom of the past.  5. News of foreign attacks spread by bridge messengers, shaping defense strategies.  6. Left without resources, communities relied on local markets for sandwiches and daily needs.  7. The earth beneath China held secrets of dynasties, like hidden treasures waiting to be discovered.  8. Conclusion: From laws to legends, China's history bridges the past to present needs.",
+        "daily_new_words": [
+          {
+            "id": 1939,
+            "word": "care",
+            "definition": "v.. 关心；照料 ; n.. 谨慎；护理",
+            "CEFR": "A2",
+            "phonetic": "/kɛər/"
+          },
+          {
+            "id": 2312,
+            "word": "classroom",
+            "definition": "n.. 教室",
+            "CEFR": "A1",
+            "phonetic": "/ˈklæsˌruːm/"
+          },
+          {
+            "id": 4303,
+            "word": "dynasty",
+            "definition": "n.. 王朝；朝代",
+            "CEFR": "B1",
+            "phonetic": "/dɪnəsti/"
+          },
+          {
+            "id": 5557,
+            "word": "flower",
+            "definition": "n.. 花 ; v.. 开花",
+            "CEFR": "A1",
+            "phonetic": "/flaʊər/"
+          },
+          {
+            "id": 8403,
+            "word": "like",
+            "definition": "v.. 喜欢；愿意 ; prep.. 像；如同 ; conj.. 如同；好像 ; n.. 喜好；类似的人（或物）",
+            "CEFR": "A2",
+            "phonetic": "/laɪk/"
+          },
+          {
+            "id": 8765,
+            "word": "market",
+            "definition": "n.. 市场；集市 ; v.. 销售；推销",
+            "CEFR": "A2",
+            "phonetic": "/ˈmɑːr.kɪt/"
+          },
+          {
+            "id": 9430,
+            "word": "necessary",
+            "definition": "adj.. 必要的，必需的",
+            "CEFR": "A2",
+            "phonetic": "/ˈnɛsəˌsɛri/"
+          },
+          {
+            "id": 9437,
+            "word": "need",
+            "definition": "v.. 需要；必须 ; n.. 需要；必需品",
+            "CEFR": "A2",
+            "phonetic": "/niːd/"
+          },
+          {
+            "id": 9554,
+            "word": "recycle",
+            "definition": "v.. 回收利用；循环使用 ; n.. 回收物；再生材料",
+            "CEFR": "A2",
+            "phonetic": "/riːˈsaɪkəl/"
+          },
+          {
+            "id": 10713,
+            "word": "shape",
+            "definition": "n.. 形状；外形 ; v.. 塑造；使成形",
+            "CEFR": "A2",
+            "phonetic": "/ʃeɪp/"
+          }
+        ],
+        "daily_review_words": [
+          {
+            "id": 968,
+            "word": "attack",
+            "definition": "v.. 攻击，进攻；抨击 ; n.. 攻击，进攻；（疾病）发作",
+            "CEFR": "A2",
+            "phonetic": "/əˈtæk/"
+          },
+          {
+            "id": 1654,
+            "word": "bridge",
+            "definition": "n.. 桥；桥梁 ; v.. 架桥于；缩短距离",
+            "CEFR": "A1",
+            "phonetic": "/brɪdʒ/"
+          },
+          {
+            "id": 1800,
+            "word": "by",
+            "definition": "prep.. 被；经由；在...旁边；到...之前；通过；根据 ; adv.. 经过；在旁边",
+            "CEFR": "A1",
+            "phonetic": "/baɪ/"
+          },
+          {
+            "id": 1908,
+            "word": "capital",
+            "definition": "n.. 首都；资本；大写字母 ; adj.. 大写的；可处死刑的",
+            "CEFR": "A2",
+            "phonetic": "/ˈkæpɪtl/"
+          },
+          {
+            "id": 2199,
+            "word": "china",
+            "definition": "n.. 中国；瓷器",
+            "CEFR": "B2",
+            "phonetic": "/ˈtʃaɪnə/"
+          },
+          {
+            "id": 2584,
+            "word": "complain",
+            "definition": "v.. 抱怨，投诉 ; n.. 抱怨，投诉",
+            "CEFR": "A2",
+            "phonetic": "/kəmˈpleɪn/"
+          },
+          {
+            "id": 2937,
+            "word": "copy",
+            "definition": "v.. 复制；抄袭 ; n.. 副本；拷贝；一本（份）",
+            "CEFR": "A2",
+            "phonetic": "/ˈkɒpi/"
+          },
+          {
+            "id": 3892,
+            "word": "discussion",
+            "definition": "n.. 讨论；商讨 ; v.. 讨论；论述",
+            "CEFR": "A2",
+            "phonetic": "/dɪˈskʌʃən/"
+          },
+          {
+            "id": 4320,
+            "word": "early",
+            "definition": "adj.. 早的；早期的 ; adv.. 早；提早",
+            "CEFR": "A2",
+            "phonetic": "/ˈɜːrli/"
+          },
+          {
+            "id": 4330,
+            "word": "earth",
+            "definition": "n.. 地球；土地；陆地 ; v.. 把（电线）接地",
+            "CEFR": "A2",
+            "phonetic": "/ɜːrθ/"
+          },
+          {
+            "id": 5734,
+            "word": "foundation",
+            "definition": "n.. 基础；地基；基金会 ; v.. 创立；建立",
+            "CEFR": "B1",
+            "phonetic": "/faʊnˈdeɪʃən/"
+          },
+          {
+            "id": 6685,
+            "word": "here",
+            "definition": "adv.. 这里 ; interj.. 喂",
+            "CEFR": "A1",
+            "phonetic": "/hɪr/"
+          },
+          {
+            "id": 8125,
+            "word": "king",
+            "definition": "n.. 国王；君主",
+            "CEFR": "A1",
+            "phonetic": "/kɪŋ/"
+          },
+          {
+            "id": 8264,
+            "word": "law",
+            "definition": "n.. 法律；法规 ; v.. 起诉；控告",
+            "CEFR": "A2",
+            "phonetic": "/lɔː/"
+          },
+          {
+            "id": 8308,
+            "word": "left",
+            "definition": "v.. 离开；留下 ; n.. 左边；左派 ; adj.. 左边的；剩余的",
+            "CEFR": "A2",
+            "phonetic": "/lɛft/"
+          },
+          {
+            "id": 8845,
+            "word": "me",
+            "definition": "pron.. 我",
+            "CEFR": "A1",
+            "phonetic": "/miː/"
+          },
+          {
+            "id": 9488,
+            "word": "news",
+            "definition": "n.. 新闻，消息",
+            "CEFR": "A1",
+            "phonetic": "/njuːz/"
+          },
+          {
+            "id": 10129,
+            "word": "rude",
+            "definition": "adj.. 粗鲁的，无礼的",
+            "CEFR": "A1",
+            "phonetic": "/ruːd/"
+          },
+          {
+            "id": 10258,
+            "word": "sandwich",
+            "definition": "n.. 三明治 ; v.. 夹入；挤进",
+            "CEFR": "A1",
+            "phonetic": "/ˈsænwɪtʃ/"
+          },
+          {
+            "id": 10939,
+            "word": "sixteen",
+            "definition": "num.. 十六",
+            "CEFR": "A1",
+            "phonetic": "/sɪkˈstiːn/"
+          }
+        ]
+      },
+      {
+        "id": 363,
+        "user_id": 5,
+        "date": "2025-06-23",
+        "tag": "Education",
+        "CEFR": "A1",
+        "english_title": "From Lab Complaints to Nobel Dreams: How a Rude Teen Found Her Inner Scientist",
+        "chinese_title": "从实验室抱怨到科学突破：这个叛逆少女如何用三明治和啤酒征服化学界",
+        "outline": "1. Introduction: A headteacher discovers a dry chemistry lab report left behind by a sixteen-year-old student. 2. Problem: The student complains about rude behavior in daily lab sessions, affecting her foundation in science. 3. Conflict: A discussion arises between the student and a scientist about different approaches to experiments. 4. Discovery: The student makes a breakthrough by the bridge, leading to an early exam success. 5. Resolution: The headteacher praises her, and the news spreads, inspiring others. 6. Conclusion: Maybe science and nature can teach us more than we think, even through a simple sandwich and beer chat.",
+        "daily_new_words": [
+          {
+            "id": 1271,
+            "word": "beer",
+            "definition": "n.. 啤酒",
+            "CEFR": "A2",
+            "phonetic": "/bɪər/"
+          },
+          {
+            "id": 3267,
+            "word": "daily",
+            "definition": "adj.. 每日的 ; adv.. 每日 ; n.. 日报",
+            "CEFR": "A2",
+            "phonetic": "/ˈdeɪli/"
+          },
+          {
+            "id": 3749,
+            "word": "different",
+            "definition": "adj.. 不同的",
+            "CEFR": "A1",
+            "phonetic": "/ˈdɪfərənt/"
+          },
+          {
+            "id": 3879,
+            "word": "discovery",
+            "definition": "n.. 发现；发觉 ; v.. 发现；发觉",
+            "CEFR": "B1",
+            "phonetic": "/dɪˈskʌvəri/"
+          },
+          {
+            "id": 4236,
+            "word": "dry",
+            "definition": "adj.. 干的；干燥的 ; v.. 使干燥；变干",
+            "CEFR": "A2",
+            "phonetic": "/draɪ/"
+          },
+          {
+            "id": 5734,
+            "word": "foundation",
+            "definition": "n.. 基础；地基；基金会 ; v.. 创立；建立",
+            "CEFR": "B1",
+            "phonetic": "/faʊnˈdeɪʃən/"
+          },
+          {
+            "id": 6583,
+            "word": "headteacher",
+            "definition": "n.. 校长",
+            "CEFR": "B2",
+            "phonetic": "/ˈhɛdˌtiːtʃər/"
+          },
+          {
+            "id": 6710,
+            "word": "herself",
+            "definition": "pron.. 她自己",
+            "CEFR": "A2",
+            "phonetic": "/hɜːrˈsɛlf/"
+          },
+          {
+            "id": 8841,
+            "word": "maybe",
+            "definition": "adv.. 也许，可能",
+            "CEFR": "A1",
+            "phonetic": "/ˈmeɪbi/"
+          },
+          {
+            "id": 9410,
+            "word": "nature",
+            "definition": "n.. 自然；本质；天性",
+            "CEFR": "A2",
+            "phonetic": "/ˈneɪtʃər/"
+          }
+        ],
+        "daily_review_words": [
+          {
+            "id": 1654,
+            "word": "bridge",
+            "definition": "n.. 桥；桥梁 ; v.. 架桥于；缩短距离",
+            "CEFR": "A1",
+            "phonetic": "/brɪdʒ/"
+          },
+          {
+            "id": 1800,
+            "word": "by",
+            "definition": "prep.. 被；经由；在...旁边；到...之前；通过；根据 ; adv.. 经过；在旁边",
+            "CEFR": "A1",
+            "phonetic": "/baɪ/"
+          },
+          {
+            "id": 2170,
+            "word": "chemistry",
+            "definition": "n.. 化学；化学性质；化学反应 ; n.. 感情关系；吸引力",
+            "CEFR": "B1",
+            "phonetic": "/ˈkɛmɪstri/"
+          },
+          {
+            "id": 2584,
+            "word": "complain",
+            "definition": "v.. 抱怨，投诉 ; n.. 抱怨，投诉",
+            "CEFR": "A2",
+            "phonetic": "/kəmˈpleɪn/"
+          },
+          {
+            "id": 2937,
+            "word": "copy",
+            "definition": "v.. 复制；抄袭 ; n.. 副本；拷贝；一本（份）",
+            "CEFR": "A2",
+            "phonetic": "/ˈkɒpi/"
+          },
+          {
+            "id": 3892,
+            "word": "discussion",
+            "definition": "n.. 讨论；商讨 ; v.. 讨论；论述",
+            "CEFR": "A2",
+            "phonetic": "/dɪˈskʌʃən/"
+          },
+          {
+            "id": 4320,
+            "word": "early",
+            "definition": "adj.. 早的；早期的 ; adv.. 早；提早",
+            "CEFR": "A2",
+            "phonetic": "/ˈɜːrli/"
+          },
+          {
+            "id": 4908,
+            "word": "exam",
+            "definition": "n.. 考试；测验",
+            "CEFR": "A2",
+            "phonetic": "/ɪɡˈzæm/"
+          },
+          {
+            "id": 5734,
+            "word": "foundation",
+            "definition": "n.. 基础；地基；基金会 ; v.. 创立；建立",
+            "CEFR": "B1",
+            "phonetic": "/faʊnˈdeɪʃən/"
+          },
+          {
+            "id": 6685,
+            "word": "here",
+            "definition": "adv.. 这里 ; interj.. 喂",
+            "CEFR": "A1",
+            "phonetic": "/hɪr/"
+          },
+          {
+            "id": 8125,
+            "word": "king",
+            "definition": "n.. 国王；君主",
+            "CEFR": "A1",
+            "phonetic": "/kɪŋ/"
+          },
+          {
+            "id": 8163,
+            "word": "lab",
+            "definition": "n.. 实验室",
+            "CEFR": "B1",
+            "phonetic": "/læb/"
+          },
+          {
+            "id": 8841,
+            "word": "maybe",
+            "definition": "adv.. 也许，可能",
+            "CEFR": "A1",
+            "phonetic": "/ˈmeɪbi/"
+          },
+          {
+            "id": 8845,
+            "word": "me",
+            "definition": "pron.. 我",
+            "CEFR": "A1",
+            "phonetic": "/miː/"
+          },
+          {
+            "id": 8980,
+            "word": "metre",
+            "definition": "n.. 米；韵律；格律",
+            "CEFR": "A2",
+            "phonetic": "/ˈmiːtər/"
+          },
+          {
+            "id": 9488,
+            "word": "news",
+            "definition": "n.. 新闻，消息",
+            "CEFR": "A1",
+            "phonetic": "/njuːz/"
+          },
+          {
+            "id": 10129,
+            "word": "rude",
+            "definition": "adj.. 粗鲁的，无礼的",
+            "CEFR": "A1",
+            "phonetic": "/ruːd/"
+          },
+          {
+            "id": 10258,
+            "word": "sandwich",
+            "definition": "n.. 三明治 ; v.. 夹入；挤进",
+            "CEFR": "A1",
+            "phonetic": "/ˈsænwɪtʃ/"
+          },
+          {
+            "id": 10389,
+            "word": "scientist",
+            "definition": "n.. 科学家",
+            "CEFR": "A1",
+            "phonetic": "/ˈsaɪəntɪst/"
+          },
+          {
+            "id": 10939,
+            "word": "sixteen",
+            "definition": "num.. 十六",
+            "CEFR": "A1",
+            "phonetic": "/sɪkˈstiːn/"
+          }
+        ]
+      },
+      {
+        "id": 364,
+        "user_id": 5,
+        "date": "2025-06-23",
+        "tag": "Travel",
+        "CEFR": "A1",
+        "english_title": "Dirty Secrets in the Sky: The Shocking Crash That Exposed an Egyptian Airline's Safety Failures",
+        "chinese_title": "空中惊魂：埃及航空中国坠机事件背后，那些不为人知的肮脏秘密",
+        "outline": "1. Introduction: A mysterious crash of an Egyptian airline airplane in China sparks a huge discussion about airline safety. \n2. The incident: The airplane, equipped with a faulty motor, crashed near a bridge, leaving sixteen passengers to escape with minor injuries. \n3. Investigation: Authorities land into the dirty details of the crash, uncovering rude behavior by the airline's elder staff. \n4. Passenger complaints: Travelers complain about the different safety measures, comparing them to other airlines like King Airline. \n5. Cultural clash: The crash highlights the maybe dirty side of the Egyptian airline's operations in China. \n6. Resolution: A copy of the safety map is distributed, and new equipment is promised to prevent future crashes. \n7. Conclusion: The incident serves as a wake-up call for airline safety, with hopes for a cleaner, safer future.",
+        "daily_new_words": [
+          {
+            "id": 1632,
+            "word": "break",
+            "definition": "v.. 打破；中断；违反 ; n.. 破裂；间歇；休息",
+            "CEFR": "A2",
+            "phonetic": "/breɪk/"
+          },
+          {
+            "id": 3749,
+            "word": "different",
+            "definition": "adj.. 不同的",
+            "CEFR": "A1",
+            "phonetic": "/ˈdɪfərənt/"
+          },
+          {
+            "id": 3816,
+            "word": "dirty",
+            "definition": "adj.. 脏的；卑鄙的 ; v.. 弄脏",
+            "CEFR": "A1",
+            "phonetic": "/ˈdɜːrti/"
+          },
+          {
+            "id": 4423,
+            "word": "egypt",
+            "definition": "n.. 埃及",
+            "CEFR": "B1",
+            "phonetic": "/ˈiːdʒɪpt/"
+          },
+          {
+            "id": 4424,
+            "word": "egyptian",
+            "definition": "adj.. 埃及的；埃及人的 ; n.. 埃及人；埃及语",
+            "CEFR": "B1",
+            "phonetic": "/ɪˈdʒɪpʃən/"
+          },
+          {
+            "id": 4444,
+            "word": "elder",
+            "definition": "n.. 长者；前辈 ; adj.. 年长的",
+            "CEFR": "A1",
+            "phonetic": "/ˈɛldər/"
+          },
+          {
+            "id": 4795,
+            "word": "escape",
+            "definition": "v.. 逃跑，逃脱 ; n.. 逃跑，逃脱",
+            "CEFR": "A2",
+            "phonetic": "/ɪˈskeɪp/"
+          },
+          {
+            "id": 6975,
+            "word": "huge",
+            "definition": "adj.. 巨大的，庞大的",
+            "CEFR": "B1",
+            "phonetic": "/hjuːdʒ/"
+          },
+          {
+            "id": 7809,
+            "word": "into",
+            "definition": "prep.. 进入；到…里面；成为；转入",
+            "CEFR": "A1",
+            "phonetic": "/ˈɪntuː/"
+          },
+          {
+            "id": 8201,
+            "word": "land",
+            "definition": "v.. 着陆；登陆；卸货 ; n.. 陆地；土地；国家",
+            "CEFR": "A2",
+            "phonetic": "/lænd/"
+          }
+        ],
+        "daily_review_words": [
+          {
+            "id": 392,
+            "word": "airline",
+            "definition": "n.. 航空公司；航线",
+            "CEFR": "B1",
+            "phonetic": "/ˈɛərlaɪn/"
+          },
+          {
+            "id": 395,
+            "word": "airplane",
+            "definition": "n.. 飞机",
+            "CEFR": "A1",
+            "phonetic": "/ˈɛrpleɪn/"
+          },
+          {
+            "id": 1654,
+            "word": "bridge",
+            "definition": "n.. 桥；桥梁 ; v.. 架桥于；缩短距离",
+            "CEFR": "A1",
+            "phonetic": "/brɪdʒ/"
+          },
+          {
+            "id": 1800,
+            "word": "by",
+            "definition": "prep.. 被；经由；在...旁边；到...之前；通过；根据 ; adv.. 经过；在旁边",
+            "CEFR": "A1",
+            "phonetic": "/baɪ/"
+          },
+          {
+            "id": 2199,
+            "word": "china",
+            "definition": "n.. 中国；瓷器",
+            "CEFR": "B2",
+            "phonetic": "/ˈtʃaɪnə/"
+          },
+          {
+            "id": 2584,
+            "word": "complain",
+            "definition": "v.. 抱怨，投诉 ; n.. 抱怨，投诉",
+            "CEFR": "A2",
+            "phonetic": "/kəmˈpleɪn/"
+          },
+          {
+            "id": 2937,
+            "word": "copy",
+            "definition": "v.. 复制；抄袭 ; n.. 副本；拷贝；一本（份）",
+            "CEFR": "A2",
+            "phonetic": "/ˈkɒpi/"
+          },
+          {
+            "id": 3068,
+            "word": "crash",
+            "definition": "v.. 碰撞；坠毁；崩溃 ; n.. 碰撞；坠毁；崩溃",
+            "CEFR": "B1",
+            "phonetic": "/kræʃ/"
+          },
+          {
+            "id": 3892,
+            "word": "discussion",
+            "definition": "n.. 讨论；商讨 ; v.. 讨论；论述",
+            "CEFR": "A2",
+            "phonetic": "/dɪˈskʌʃən/"
+          },
+          {
+            "id": 4762,
+            "word": "equip",
+            "definition": "v.. 装备，配备 ; n.. 装备，设备",
+            "CEFR": "B2",
+            "phonetic": "/ɪˈkwɪp/"
+          },
+          {
+            "id": 6932,
+            "word": "hotel",
+            "definition": "n.. 旅馆，酒店",
+            "CEFR": "A1",
+            "phonetic": "/həʊˈtel/"
+          },
+          {
+            "id": 8125,
+            "word": "king",
+            "definition": "n.. 国王；君主",
+            "CEFR": "A1",
+            "phonetic": "/kɪŋ/"
+          },
+          {
+            "id": 8745,
+            "word": "map",
+            "definition": "n.. 地图 ; v.. 绘制地图",
+            "CEFR": "A1",
+            "phonetic": "/mæp/"
+          },
+          {
+            "id": 8841,
+            "word": "maybe",
+            "definition": "adv.. 也许，可能",
+            "CEFR": "A1",
+            "phonetic": "/ˈmeɪbi/"
+          },
+          {
+            "id": 8845,
+            "word": "me",
+            "definition": "pron.. 我",
+            "CEFR": "A1",
+            "phonetic": "/miː/"
+          },
+          {
+            "id": 9270,
+            "word": "motor",
+            "definition": "n.. 发动机；马达 ; v.. 乘汽车旅行；驾车",
+            "CEFR": "B1",
+            "phonetic": "/ˈmoʊtər/"
+          },
+          {
+            "id": 10129,
+            "word": "rude",
+            "definition": "adj.. 粗鲁的，无礼的",
+            "CEFR": "A1",
+            "phonetic": "/ruːd/"
+          },
+          {
+            "id": 10201,
+            "word": "safety",
+            "definition": "n.. 安全；安全性",
+            "CEFR": "B1",
+            "phonetic": "/ˈseɪfti/"
+          },
+          {
+            "id": 10258,
+            "word": "sandwich",
+            "definition": "n.. 三明治 ; v.. 夹入；挤进",
+            "CEFR": "A1",
+            "phonetic": "/ˈsænwɪtʃ/"
+          },
+          {
+            "id": 10939,
+            "word": "sixteen",
+            "definition": "num.. 十六",
+            "CEFR": "A1",
+            "phonetic": "/sɪkˈstiːn/"
+          }
+        ]
+      },
+      {
+        "id": 365,
+        "user_id": 5,
+        "date": "2025-06-23",
+        "tag": "Politics",
+        "CEFR": "A1",
+        "english_title": "Satellite Attack in Greece: A King's Complaint, a Judge's Dilemma, and a Sandwich That Changed Everything",
+        "chinese_title": "希腊卫星袭击事件：国王的愤怒、法官的抉择，以及一个扭转局势的三明治",
+        "outline": "1. Introduction: A news report about a satellite attack in Greece sparks global discussion. \n2. Conflict: The king of Greece complains about the rude behavior of a neighboring country, possibly China. \n3. Legal Action: A judge reviews the case, citing international law, while neither side backs down. \n4. Political Turmoil: The rush to defend the capital leads to hurried decisions, leaving the future uncertain. \n5. Human Element: A sixteen-year-old witness shares their story, humanizing the crisis. \n6. Resolution: A bridge is built (literally and metaphorically) to restore peace, with a sandwich shared by diplomats as a symbol. \n7. Conclusion: The incident becomes a best-seller in news media, with lessons for global foundations.",
+        "daily_new_words": [
+          {
+            "id": 672,
+            "word": "anything",
+            "definition": "pron.. 任何东西；任何事物",
+            "CEFR": "A1",
+            "phonetic": "/ˈɛniˌθɪŋ/"
+          },
+          {
+            "id": 1348,
+            "word": "best-seller",
+            "definition": "n.. 畅销书；畅销商品",
+            "CEFR": "B2",
+            "phonetic": "/ˈbɛstˌsɛlər/"
+          },
+          {
+            "id": 5917,
+            "word": "future",
+            "definition": "n.. 未来；将来 ; adj.. 未来的；将来的",
+            "CEFR": "A2",
+            "phonetic": "/ˈfjuːtʃər/"
+          },
+          {
+            "id": 6272,
+            "word": "greece",
+            "definition": "n.. 希腊",
+            "CEFR": "B1",
+            "phonetic": "/ɡriːs/"
+          },
+          {
+            "id": 7021,
+            "word": "hurry",
+            "definition": "v.. 匆忙，赶紧 ; n.. 匆忙，急忙",
+            "CEFR": "A2",
+            "phonetic": "/ˈhɜːri/"
+          },
+          {
+            "id": 8043,
+            "word": "judge",
+            "definition": "v.. 判断；审判 ; n.. 法官；裁判员",
+            "CEFR": "A2",
+            "phonetic": "/dʒʌdʒ/"
+          },
+          {
+            "id": 8308,
+            "word": "left",
+            "definition": "v.. 离开；留下 ; n.. 左边；左派 ; adj.. 左边的；剩余的",
+            "CEFR": "A2",
+            "phonetic": "/lɛft/"
+          },
+          {
+            "id": 9458,
+            "word": "neither",
+            "definition": "pron.. 两者都不 ; conj.. 也不 ; adv.. 也不",
+            "CEFR": "B2",
+            "phonetic": "/ˈnaɪðər/"
+          },
+          {
+            "id": 9488,
+            "word": "news",
+            "definition": "n.. 新闻，消息",
+            "CEFR": "A1",
+            "phonetic": "/njuːz/"
+          },
+          {
+            "id": 10163,
+            "word": "rush",
+            "definition": "v.. 冲，奔；催促；仓促行事 ; n.. 匆忙；急流；一阵（感觉）",
+            "CEFR": "A2",
+            "phonetic": "/rʌʃ/"
+          }
+        ],
+        "daily_review_words": [
+          {
+            "id": 968,
+            "word": "attack",
+            "definition": "v.. 攻击，进攻；抨击 ; n.. 攻击，进攻；（疾病）发作",
+            "CEFR": "A2",
+            "phonetic": "/əˈtæk/"
+          },
+          {
+            "id": 1382,
+            "word": "bill",
+            "definition": "n.. 账单；法案；钞票 ; v.. 开账单；宣布",
+            "CEFR": "A2",
+            "phonetic": "/bɪl/"
+          },
+          {
+            "id": 1654,
+            "word": "bridge",
+            "definition": "n.. 桥；桥梁 ; v.. 架桥于；缩短距离",
+            "CEFR": "A1",
+            "phonetic": "/brɪdʒ/"
+          },
+          {
+            "id": 1800,
+            "word": "by",
+            "definition": "prep.. 被；经由；在...旁边；到...之前；通过；根据 ; adv.. 经过；在旁边",
+            "CEFR": "A1",
+            "phonetic": "/baɪ/"
+          },
+          {
+            "id": 1908,
+            "word": "capital",
+            "definition": "n.. 首都；资本；大写字母 ; adj.. 大写的；可处死刑的",
+            "CEFR": "A2",
+            "phonetic": "/ˈkæpɪtl/"
+          },
+          {
+            "id": 2199,
+            "word": "china",
+            "definition": "n.. 中国；瓷器",
+            "CEFR": "B2",
+            "phonetic": "/ˈtʃaɪnə/"
+          },
+          {
+            "id": 2584,
+            "word": "complain",
+            "definition": "v.. 抱怨，投诉 ; n.. 抱怨，投诉",
+            "CEFR": "A2",
+            "phonetic": "/kəmˈpleɪn/"
+          },
+          {
+            "id": 2937,
+            "word": "copy",
+            "definition": "v.. 复制；抄袭 ; n.. 副本；拷贝；一本（份）",
+            "CEFR": "A2",
+            "phonetic": "/ˈkɒpi/"
+          },
+          {
+            "id": 3892,
+            "word": "discussion",
+            "definition": "n.. 讨论；商讨 ; v.. 讨论；论述",
+            "CEFR": "A2",
+            "phonetic": "/dɪˈskʌʃən/"
+          },
+          {
+            "id": 5734,
+            "word": "foundation",
+            "definition": "n.. 基础；地基；基金会 ; v.. 创立；建立",
+            "CEFR": "B1",
+            "phonetic": "/faʊnˈdeɪʃən/"
+          },
+          {
+            "id": 8125,
+            "word": "king",
+            "definition": "n.. 国王；君主",
+            "CEFR": "A1",
+            "phonetic": "/kɪŋ/"
+          },
+          {
+            "id": 8264,
+            "word": "law",
+            "definition": "n.. 法律；法规 ; v.. 起诉；控告",
+            "CEFR": "A2",
+            "phonetic": "/lɔː/"
+          },
+          {
+            "id": 8308,
+            "word": "left",
+            "definition": "v.. 离开；留下 ; n.. 左边；左派 ; adj.. 左边的；剩余的",
+            "CEFR": "A2",
+            "phonetic": "/lɛft/"
+          },
+          {
+            "id": 8841,
+            "word": "maybe",
+            "definition": "adv.. 也许，可能",
+            "CEFR": "A1",
+            "phonetic": "/ˈmeɪbi/"
+          },
+          {
+            "id": 8845,
+            "word": "me",
+            "definition": "pron.. 我",
+            "CEFR": "A1",
+            "phonetic": "/miː/"
+          },
+          {
+            "id": 9488,
+            "word": "news",
+            "definition": "n.. 新闻，消息",
+            "CEFR": "A1",
+            "phonetic": "/njuːz/"
+          },
+          {
+            "id": 10129,
+            "word": "rude",
+            "definition": "adj.. 粗鲁的，无礼的",
+            "CEFR": "A1",
+            "phonetic": "/ruːd/"
+          },
+          {
+            "id": 10258,
+            "word": "sandwich",
+            "definition": "n.. 三明治 ; v.. 夹入；挤进",
+            "CEFR": "A1",
+            "phonetic": "/ˈsænwɪtʃ/"
+          },
+          {
+            "id": 10282,
+            "word": "satellite",
+            "definition": "n.. 卫星；人造卫星 ; adj.. 卫星的；附属的",
+            "CEFR": "B1",
+            "phonetic": "/ˈsætəlaɪt/"
+          },
+          {
+            "id": 10939,
+            "word": "sixteen",
+            "definition": "num.. 十六",
+            "CEFR": "A1",
+            "phonetic": "/sɪkˈstiːn/"
+          }
+        ]
+      },
+      {
+        "id": 366,
+        "user_id": 5,
+        "date": "2025-06-23",
+        "tag": "Tech",
+        "CEFR": "A1",
+        "english_title": "Cyber Siege in the Lab: The Sixteen-Year Mystery of the King's Lost Treasure Unveiled!",
+        "chinese_title": "实验室遭遇网络攻击！十六年前国王宝藏之谜终被破解！",
+        "outline": "1. Introduction: The director of a research lab announces a groundbreaking discovery about a sixteen-year-old mystery involving a king's lost treasure. \n2. The Attack: A cyberattack targets the lab's foundation, compromising sensitive data including charts and discussions about the treasure. \n3. The Investigation: The secretary and motor team inspect the damage, finding a copy of the attack relayed through a keyboard hack. \n4. The Breakthrough: A loudspeaker broadcast reveals news of the treasure's location near a bridge by the coal mines. \n5. The Resolution: The team sets a plan to recover the treasure, despite complaints about rude interruptions during the mission. \n6. Conclusion: The CD containing the final details is found, and the team celebrates, also enjoying sandwiches during their success.",
+        "daily_new_words": [
+          {
+            "id": 472,
+            "word": "also",
+            "definition": "adv.. 也，还",
+            "CEFR": "A1",
+            "phonetic": "/ˈɔːlsoʊ/"
+          },
+          {
+            "id": 878,
+            "word": "asleep",
+            "definition": "adj.. 睡着的",
+            "CEFR": "A2",
+            "phonetic": "/əˈsliːp/"
+          },
+          {
+            "id": 2080,
+            "word": "certainly",
+            "definition": "adv.. 当然；无疑",
+            "CEFR": "A2",
+            "phonetic": "/ˈsɜːrtənli/"
+          },
+          {
+            "id": 2137,
+            "word": "chart",
+            "definition": "n.. 图表；航海图 ; v.. 绘制图表；制定计划",
+            "CEFR": "A2",
+            "phonetic": "/tʃɑːrt/"
+          },
+          {
+            "id": 2387,
+            "word": "coal",
+            "definition": "n.. 煤 ; v.. 加煤",
+            "CEFR": "B1",
+            "phonetic": "/koʊl/"
+          },
+          {
+            "id": 3812,
+            "word": "director",
+            "definition": "n.. 主管；董事；导演",
+            "CEFR": "A2",
+            "phonetic": "/dɪˈrɛktər/"
+          },
+          {
+            "id": 6061,
+            "word": "get",
+            "definition": "v.. 得到；获得；变得 ; n.. 生殖；幼兽",
+            "CEFR": "A1",
+            "phonetic": "/ɡɛt/"
+          },
+          {
+            "id": 8094,
+            "word": "keyboard",
+            "definition": "n.. 键盘 ; v.. 用键盘输入",
+            "CEFR": "B1",
+            "phonetic": "/ˈkiː.bɔːrd/"
+          },
+          {
+            "id": 8546,
+            "word": "loudspeaker",
+            "definition": "n.. 扬声器，喇叭",
+            "CEFR": "B1",
+            "phonetic": "/ˈlaʊdˌspiːkər/"
+          },
+          {
+            "id": 10497,
+            "word": "secretary",
+            "definition": "n.. 秘书；书记；部长",
+            "CEFR": "A2",
+            "phonetic": "/ˈsɛkrəˌtɛri/"
+          }
+        ],
+        "daily_review_words": [
+          {
+            "id": 968,
+            "word": "attack",
+            "definition": "v.. 攻击，进攻；抨击 ; n.. 攻击，进攻；（疾病）发作",
+            "CEFR": "A2",
+            "phonetic": "/əˈtæk/"
+          },
+          {
+            "id": 1654,
+            "word": "bridge",
+            "definition": "n.. 桥；桥梁 ; v.. 架桥于；缩短距离",
+            "CEFR": "A1",
+            "phonetic": "/brɪdʒ/"
+          },
+          {
+            "id": 1677,
+            "word": "broadcast",
+            "definition": "v.. 广播；播送 ; n.. 广播；广播节目",
+            "CEFR": "B2",
+            "phonetic": "/ˈbrɔːdkæst/"
+          },
+          {
+            "id": 1800,
+            "word": "by",
+            "definition": "prep.. 被；经由；在...旁边；到...之前；通过；根据 ; adv.. 经过；在旁边",
+            "CEFR": "A1",
+            "phonetic": "/baɪ/"
+          },
+          {
+            "id": 2034,
+            "word": "cd",
+            "definition": "n.. 光盘 ; n.. 存款单",
+            "CEFR": "A1",
+            "phonetic": "/siːˈdiː/"
+          },
+          {
+            "id": 2584,
+            "word": "complain",
+            "definition": "v.. 抱怨，投诉 ; n.. 抱怨，投诉",
+            "CEFR": "A2",
+            "phonetic": "/kəmˈpleɪn/"
+          },
+          {
+            "id": 2937,
+            "word": "copy",
+            "definition": "v.. 复制；抄袭 ; n.. 副本；拷贝；一本（份）",
+            "CEFR": "A2",
+            "phonetic": "/ˈkɒpi/"
+          },
+          {
+            "id": 3892,
+            "word": "discussion",
+            "definition": "n.. 讨论；商讨 ; v.. 讨论；论述",
+            "CEFR": "A2",
+            "phonetic": "/dɪˈskʌʃən/"
+          },
+          {
+            "id": 5734,
+            "word": "foundation",
+            "definition": "n.. 基础；地基；基金会 ; v.. 创立；建立",
+            "CEFR": "B1",
+            "phonetic": "/faʊnˈdeɪʃən/"
+          },
+          {
+            "id": 7657,
+            "word": "inspect",
+            "definition": "v.. 检查，视察",
+            "CEFR": "B2",
+            "phonetic": "/ɪnˈspɛkt/"
+          },
+          {
+            "id": 8125,
+            "word": "king",
+            "definition": "n.. 国王；君主",
+            "CEFR": "A1",
+            "phonetic": "/kɪŋ/"
+          },
+          {
+            "id": 8163,
+            "word": "lab",
+            "definition": "n.. 实验室",
+            "CEFR": "B1",
+            "phonetic": "/læb/"
+          },
+          {
+            "id": 8845,
+            "word": "me",
+            "definition": "pron.. 我",
+            "CEFR": "A1",
+            "phonetic": "/miː/"
+          },
+          {
+            "id": 9270,
+            "word": "motor",
+            "definition": "n.. 发动机；马达 ; v.. 乘汽车旅行；驾车",
+            "CEFR": "B1",
+            "phonetic": "/ˈmoʊtər/"
+          },
+          {
+            "id": 9488,
+            "word": "news",
+            "definition": "n.. 新闻，消息",
+            "CEFR": "A1",
+            "phonetic": "/njuːz/"
+          },
+          {
+            "id": 9669,
+            "word": "relay",
+            "definition": "v.. 传递；转播 ; n.. 接力赛；继电器",
+            "CEFR": "B2",
+            "phonetic": "/ˈriːleɪ/"
+          },
+          {
+            "id": 10129,
+            "word": "rude",
+            "definition": "adj.. 粗鲁的，无礼的",
+            "CEFR": "A1",
+            "phonetic": "/ruːd/"
+          },
+          {
+            "id": 10258,
+            "word": "sandwich",
+            "definition": "n.. 三明治 ; v.. 夹入；挤进",
+            "CEFR": "A1",
+            "phonetic": "/ˈsænwɪtʃ/"
+          },
+          {
+            "id": 10659,
+            "word": "set",
+            "definition": "v.. 放，置；设定 ; n.. 一套；集合；装置 ; adj.. 固定的；准备好的",
+            "CEFR": "A2",
+            "phonetic": "/sɛt/"
+          },
+          {
+            "id": 10939,
+            "word": "sixteen",
+            "definition": "num.. 十六",
+            "CEFR": "A1",
+            "phonetic": "/sɪkˈstiːn/"
+          }
+        ]
+      }
+    ],
+    "additional_information": {
+      "word_book_id": 1,
+      "daily_goal": 10,
+      "learning_proportion": 0.12489927477840451,
+      "learned_proportion": 0
+      "progression": 78
+    }
+  }

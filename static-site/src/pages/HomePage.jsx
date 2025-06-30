@@ -1,56 +1,112 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import ProgressBar from '../components/ProgressBar'
+import { getUser } from '../utils/auth';
 
-const difficultyOptions = [
-  { label: '简单', value: 1 },
-  { label: '中等', value: 2 },
-  { label: '困难', value: 3 }
-];
+const wordbookMap = {
+  1: '初中',
+  2: '高中',
+  3: '四级',
+  4: '六级',
+  5: '专四',
+  6: '专八',
+  7: '考研',
+  8: '雅思',
+  9: '托福',
+}
 
-const topicOptions = [
-  'Tech','Economy','Science','Art','History','Politics',
-  'Environment','Health','Sports','Fashion','Media','Literature',
-  'Education','Society','Laws','Travel'
-];
+export default function HomePage({ data, loading, error, onStartStudy, onChangeWordBook, onDataRefresh, onLogout }) {
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [isSubmittingGoal, setIsSubmittingGoal] = useState(false);
+  const [goalError, setGoalError] = useState('');
 
-const wordBookOptions = [
-  { label: '初中', value: 1 },
-  { label: '高中', value: 2 },
-  { label: '四级', value: 3 },
-  { label: '六级', value: 4 },
-  { label: '专四', value: 5 },
-  { label: '专八', value: 6 },
-  { label: '考研', value: 7 },
-  { label: '雅思', value: 8 },
-  { label: '托福', value: 9 },
-];
+  if (loading) return <div className="centered">加载中...</div>
+  if (error) return <div className="centered">{error}</div>
+  if (!data) return null
 
-export default function HomePage() {
-  const [level,setLevel] = useState(1);
-  const [topic,setTopic] = useState('Tech');
-  const [wordBookId, setWordBookId] = useState(1);
-  const navigate = useNavigate();
+  const wordbook = wordbookMap[data.additional_information.word_book_id] || '未知'
+  const { learning_proportion, learned_proportion, progression, total, daily_goal } = data.additional_information
 
-  const go = () => {
-    navigate(`/learn?level=${level}&topic=${topic}&word_book_id=${wordBookId}`);
+  const handleGoalChange = async (newGoal) => {
+    if (newGoal === daily_goal) {
+      setIsEditingGoal(false);
+      return;
+    }
+    setIsSubmittingGoal(true);
+    setGoalError('');
+    const userData = await getUser();
+    if (!userData || !userData.id) {
+      setGoalError('无法获取用户信息，请重新登录。');
+      setIsSubmittingGoal(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://masterwordai.com/api/set_daily_goal/${userData.id}/${newGoal}`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error('设置失败，请重试。');
+      }
+      await onDataRefresh();
+      setIsEditingGoal(false);
+    } catch (err) {
+      setGoalError(err.message);
+    } finally {
+      setIsSubmittingGoal(false);
+    }
   };
 
+  const dailyGoals = [
+    { goal: 10, text: '一篇文章' },
+    { goal: 20, text: '两篇文章' },
+    { goal: 30, text: '三篇文章' },
+  ];
+
   return (
-    <div style={{maxWidth:600,margin:'4rem auto',textAlign:'center'}}>
-      <h1 style={{color:'#6495ED'}}>背单词神器</h1>
-      <div style={{marginTop:'2rem'}}>
-        <select value={level} onChange={e=>setLevel(e.target.value)}
-          style={{padding:'0.5rem 1rem',borderRadius:'999px',border:'1px solid #6495ED',outline:'none',fontSize:'1rem',color:'#333',background:'#f4f8ff'}}>
-          {difficultyOptions.map(opt=><option key={opt.value} value={opt.value}>{opt.label}</option>)}
-        </select>
-        <select style={{marginLeft:'1rem',padding:'0.5rem 1rem',borderRadius:'999px',border:'1px solid #6495ED',outline:'none',fontSize:'1rem',color:'#333',background:'#f4f8ff'}} value={topic} onChange={e=>setTopic(e.target.value)}>
-          {topicOptions.map(t=><option key={t} value={t}>{t}</option>)}
-        </select>
-        <select style={{marginLeft:'1rem',padding:'0.5rem 1rem',borderRadius:'999px',border:'1px solid #6495ED',outline:'none',fontSize:'1rem',color:'#333',background:'#f4f8ff'}} value={wordBookId} onChange={e=>setWordBookId(Number(e.target.value))}>
-          {wordBookOptions.map(opt=><option key={opt.value} value={opt.value}>{opt.label}</option>)}
-        </select>
+    <div className="main-bg">
+      <div className="card-ui">
+        <div className="section-title">当前单词本：{wordbook}</div>
+        <ProgressBar learning={learning_proportion} learned={learned_proportion} />
+        <div className="progress-text">学习进度: {progression}/{total} (每日{daily_goal}词)</div>
+        
+        {isEditingGoal ? (
+          <div style={{ width: '100%', textAlign: 'center' }}>
+            <div className="selection-group" style={{ marginBottom: '15px' }}>
+              <label style={{ fontSize: '1rem', fontWeight: '500', color: '#333' }}>选择新的每日目标</label>
+              <div className="selection-options" style={{ marginTop: '10px' }}>
+                {dailyGoals.map(({ goal, text }) => (
+                  <button
+                    key={goal}
+                    className={`selection-btn ${daily_goal === goal ? 'active' : ''}`}
+                    onClick={() => handleGoalChange(goal)}
+                    disabled={isSubmittingGoal}
+                  >
+                    {isSubmittingGoal ? '...' : text}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {goalError && <p className="form-error">{goalError}</p>}
+            <button
+              className="switch-auth-btn"
+              style={{ marginTop: '5px' }}
+              onClick={() => { setIsEditingGoal(false); setGoalError(''); }}
+              disabled={isSubmittingGoal}
+            >
+              取消
+            </button>
+          </div>
+        ) : (
+          <div className="home-actions">
+            <div className="home-links">
+              <button className="btn-link" onClick={onChangeWordBook}>更换单词本</button>
+              <button className="btn-link" onClick={() => setIsEditingGoal(true)}>更改每日目标</button>
+              <button className="btn-link" onClick={onLogout}>退出登录</button>
+            </div>
+            <button className="btn-main btn-main-long" onClick={onStartStudy}>开始学习</button>
+          </div>
+        )}
       </div>
-      <button style={{marginTop:'2rem',background:'#6495ED',color:'#fff',border:'none',borderRadius:'999px',padding:'0.75rem 2.5rem',fontSize:'1.2rem',cursor:'pointer',boxShadow:'0 2px 8px #6495ed33'}} onClick={go}>继续</button>
     </div>
-  );
+  )
 }
