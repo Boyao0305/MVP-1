@@ -19,6 +19,7 @@ dependencies:
   - alembic
   - cryptography
   # keep pip only if you really need it later
-  - pip
   - openai
   - nltk
+  - spacy
+  - pip

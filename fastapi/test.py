@@ -8,7 +8,7 @@ import schemas2
 import models
 from sqlalchemy.orm import joinedload
 from functions.new_session import create_five_learning_logs, assign_daily_new_words,assign_daily_review_words, generate_outlines_for_date_async
-
+from functions.cefr import compare_lists_to_text
 from typing import List, Optional
 from sqlalchemy.sql.expression import func
 
@@ -492,3 +492,23 @@ def read_learning_words(
         )
 
     return words
+# @router.post(
+#     "/cefr/{log_id}",
+#     summary="Update learning_factor after a review session",
+# )
+# def cefrcalculate_learning_factor(
+#     log_id: int,
+# ):
+#     compare_lists_to_text(log_id)
+#     # cefr = (
+#     #     db.query(models.Learning_setting)
+#     #     .filter(models.Learning_setting.user_id == log_id
+#     #         models.Word_status,
+#     #         (models.Word.id == models.Word_status.words_id)
+#     #         & (models.Word_status.users_id == user_id)
+#     #         & (models.Word_status.status == "learned")
+#     #     )
+#     #     .order_by(models.Word.word)  # optional: alphabetical
+#     #     .all()
+#     # )
+#     return 1

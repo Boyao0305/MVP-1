@@ -118,6 +118,7 @@ class Learning_log(Base):
 
     daily_new_words = relationship("Word", secondary="daily_new_word_links", overlaps="new_in_logs")
     daily_review_words = relationship("Word", secondary="daily_review_word_links", overlaps="reviewed_in_logs")
+    l_daily_searched_words = relationship("Daily_searched_word", back_populates="l_learning_logs")
 
 class Daily_new_word_link(Base):
     __tablename__ = "daily_new_word_links"
@@ -132,4 +133,12 @@ class Daily_review_word_link(Base):
     learning_log_id = Column(Integer, ForeignKey("learning_logs.id"), primary_key=True)
     word_id = Column(Integer, ForeignKey("words.id"), primary_key=True)
     review_indicator = Column(Integer, default=0)
+
+class Daily_searched_word(Base):
+    __tablename__ = "daily_searched_words"
+
+    id = Column(Integer, primary_key=True, index=True)
+    word = Column(String(255), nullable=False, index=True)
+    log_id = Column(Integer, ForeignKey("learning_logs.id"), index=True)
+    l_learning_logs = relationship("Learning_log", back_populates="l_daily_searched_words")
 

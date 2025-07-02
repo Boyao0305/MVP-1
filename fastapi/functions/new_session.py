@@ -201,7 +201,7 @@ def assign_daily_new_words(user_id: int, today: dt.date, db: Session) -> dict[in
       • obey same-book & higher-CEFR rules,
       • allow shortage (log may end up with < daily_goal words).
     """
-    words_variable = 10
+    # words_variable = 10
     # 1️⃣  Read daily_goal and chosen word-book
     setting = db.query(models.Learning_setting).get(user_id)
     if not setting:
@@ -246,14 +246,32 @@ def assign_daily_new_words(user_id: int, today: dt.date, db: Session) -> dict[in
 
     # 5️⃣  Helper to filter pools by book / CEFR / duplicates
     def _candidates(words, log):
-        return [
-            w for w in words
-            if any(wb.id == word_book_id for wb in w.l_word_books)
-               and _higher_cefr(w.CEFR, log.CEFR)
-               and w not in log.daily_new_words
-        ]
+        # map CEFR to a rank so we can walk “down” the scale
+        rank = {"C2": 6, "C1": 5, "B2": 4, "B1": 3, "A2": 2, "A1": 1}
 
-    # 6️⃣  Select for each log
+        # build one list per level, starting at log.CEFR and moving downwards
+        target_rank = rank.get(log.CEFR, 1)
+        buckets: list[list[models.Word]] = [[] for _ in range(target_rank, 0, -1)]
+        for w in words:
+            if not any(wb.id == word_book_id for wb in w.l_word_books):
+                continue
+            if w in log.daily_new_words:
+                continue
+            r = rank.get(w.CEFR, 0)
+            if r:  # ignore words with invalid CEFR
+                idx = target_rank - r  # higher rank → lower index
+                if idx >= 0:  # only ≤ target and below
+                    buckets[idx].append(w)
+
+        # stitch the buckets back together so that higher-CEFR words come first;
+        # lower levels appear only if everything above them is empty
+        flat = []
+        for lst in buckets:
+            if lst:  # as soon as we find a non-empty bucket,
+                flat.extend(lst)  # we append it and BREAK ➜ “fallback once”
+                break
+        return flat
+        # 6️⃣  Select for each log
     assigned: dict[int, list[int]] = {}
 
     for log in logs:

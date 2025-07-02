@@ -7,11 +7,12 @@ COPY environment.yml .
 
 # 创建conda环境
 RUN conda env create -f environment.yml
+RUN /bin/bash -c "source activate fastapi-env && pip install cefrpy"
 
 # 激活环境的快捷方式
 RUN echo "source activate fastapi-env" > ~/.bashrc
 ENV PATH /opt/conda/envs/fastapi-env/bin:$PATH
-
+RUN python -m spacy download en_core_web_sm
 # 复制应用代码
 COPY website/ website/
 COPY . .

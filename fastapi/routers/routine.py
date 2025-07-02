@@ -28,6 +28,8 @@ from functions.new_session import (                    # ← orchestration helpe
     assign_daily_review_words,
     generate_outlines_for_date_async,
 )
+from functions.cefr import compare_lists_to_text
+from functions.cefr2 import update_average_caiji_for_user
 import json, os, asyncio
 
 
@@ -278,6 +280,22 @@ async def generate_article_for_log(
 @router.get("/word_search/{log_id}/{word}")
 
 def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
+    log = db.query(models.Learning_log).filter_by(id=log_id).first()
+    if log is None:
+        raise HTTPException(404, detail="Learning log not found")
+
+    # 2️⃣ insert the searched word
+    searched = models.Daily_searched_word(word=word, log_id=log_id)
+    db.add(searched)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        # With the composite PK (log_id, id) this fires if the *same* word is
+        # already linked to the log (or any other PK violation)
+        raise HTTPException(
+            400, detail="This word is already recorded for that log."
+        )
     word0 = word.lower()
     forms_to_try = [word]
 
@@ -467,6 +485,7 @@ def review_update(
             ws.status = "learning"
             started += 1
     db.commit()
+    compare_lists_to_text(log_id, db)
     return {
         "log_id": log_id,
         "updated_words": touched,
@@ -497,6 +516,7 @@ async def prepare_tomorrow(
     )
     if not setting:
         raise HTTPException(404, "Learning_setting not found")
+    update_average_caiji_for_user(user_id, db)
 
     # tomorrow = dt.date.today() + dt.timedelta(days=1)
     tomorrow = dt.date.today()

@@ -1,21 +1,32 @@
-
-
 from __future__ import annotations
-from typing import List, Tuple
+import sys
+import os
+import pandas as pd
+from fastapi import HTTPException
 
-from function_1 import cefr_unique_stats   # <- keep your original import
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from typing import List, Tuple
+from fastapi import APIRouter, Depends, HTTPException
+  # <- keep your original import
 
 import json
 
 
-from __future__ import annotations
+from database import SessionLocal, engine, Base
 import json
 from collections import Counter
 from typing import Dict
-
+import models
 import spacy
 from cefrpy import CEFRSpaCyAnalyzer, CEFRLevel
 
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
 NLP = spacy.load("en_core_web_sm")
 
 ABBREVIATION_MAPPING = {
@@ -109,18 +120,46 @@ def _score(props: List[float]) -> int:
 # ----------------------------------------------------------------------
 # Public API
 # ----------------------------------------------------------------------
-with open("data.json", "r", encoding="utf-8") as f:
-    python_dict = json.load(f)
-text = python_dict["text"]
-words = python_dict["words"]
-def compare_lists_to_text(text: str, words: str) -> Tuple[int, List[float]]:
+# with open("data.json", "r", encoding="utf-8") as f:
+#     python_dict = json.load(f)
+# text = python_dict["text"]
+# words = python_dict["words"]
+from sqlalchemy.orm import joinedload
+def compare_lists_to_text(log_id: int, db: Session ) -> Tuple[int, List[float]]:
+    log = (
+        db.query(models.Learning_log)
+        .options(joinedload(models.Learning_log.l_daily_searched_words))
+        .filter(models.Learning_log.id == log_id)
+        .first()
+    )
 
-    text_stats = cefr_unique_stats(text)
+    if not log:
+        raise HTTPException(404, "Log not found")
 
-    list_stats = cefr_unique_stats(" ".join(words))
+    # 2. Flatten list of tuples: [('apple',), ('banana',)] → ['apple', 'banana']
+    word_list = [w.word for w in log.l_daily_searched_words]
+
+    # 3. Join into a space-separated string
+    wordstext = " ".join(word_list)
+
+    # 4. Pass to your other function
+    # wordsresult = use_words_as_text(wordstext)
+
+
+    textresult = log.artical
+    text_stats = cefr_unique_stats(str(textresult))
+
+    list_stats = cefr_unique_stats(wordstext)
 
 
     props = _proportions(text_stats, list_stats)
     scr   = _score(props)
-    return scr
-print(compare_lists_to_text(text, words))
+    log.daily_caiji = scr
+    db.commit()
+    db.refresh(log)
+    print(wordstext)
+    print(scr,props)
+    return scr,props
+# print(compare_lists_to_text(text, words))
+with SessionLocal() as db:
+    compare_lists_to_text(1, db)
