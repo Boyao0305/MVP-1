@@ -480,7 +480,7 @@ PROMPT_TMPL = (
     "请用以上词汇生成一个一百词左右的英语文章大纲（此大纲应能概括一篇五百词英语文章的内容），"
     "再生成与此文章对应的中英文标题；回答应以json的格式输出（"
     '{{"outline":"", "english_title":"", "chinese_title":""}}'
-    "）标题语言应生动且吸引人，请模仿微信公众号类似文章的标题"
+    "）标题语言应生动且吸引人"
 )
 MAX_RETRIES  = 3          # total attempts (1 original + 2 retries)
 RETRY_DELAY  = 2.0        # seconds to wait between tries

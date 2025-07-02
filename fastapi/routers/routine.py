@@ -208,13 +208,13 @@ async def generate_article_for_log(
             joinedload(models.Learning_log.daily_review_words),
         )
         .filter(
-            models.Learning_log.date == target_date,
-            models.Learning_log.id == log_id,)
+
+            models.Learning_log.id == log_id)
         .order_by(models.Learning_log.id.desc())
         .first()
 
     )
-
+    # models.Learning_log.date == target_date,
     if not log:
         raise HTTPException(404, "Learning log not found")
     if not log.daily_new_words:
