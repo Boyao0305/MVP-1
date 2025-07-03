@@ -161,5 +161,5 @@ def compare_lists_to_text(log_id: int, db: Session ) -> Tuple[int, List[float]]:
     print(scr,props)
     return scr,props
 # print(compare_lists_to_text(text, words))
-with SessionLocal() as db:
-    compare_lists_to_text(1, db)
+# with SessionLocal() as db:
+#     compare_lists_to_text(1, db)
