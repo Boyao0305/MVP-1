@@ -19,7 +19,7 @@ export default function AppreciationPage({ logId, onFinish, isLastArticle }) {
     setError('');
 
     try {
-      const response = await fetch(`https://masterwordai.com/api/appreciation/${logId}/${level}`, {
+      const response = await fetch(`api/appreciation/${logId}/${level}`, {
         method: 'POST',
       });
       if (!response.ok) {
@@ -45,7 +45,7 @@ export default function AppreciationPage({ logId, onFinish, isLastArticle }) {
     }
 
     try {
-      await fetch(`https://masterwordai.com/api/finish_study/${userData.id}`, {
+      await fetch(`api/finish_study/${userData.id}`, {
         method: 'POST',
       });
       // We proceed even if this fails, as it's a non-critical logging action.

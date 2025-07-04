@@ -14,7 +14,7 @@ export default function RegisterPage({ onRegisterSuccess, onSwitchToLogin }) {
     setLoading(true);
 
     try {
-      const response = await fetch('https://masterwordai.com/api/register', {
+      const response = await fetch('api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

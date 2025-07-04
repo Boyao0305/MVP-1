@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 
 // Checks if a word is a variant of any word in the review set.
 // Handles simple plural (-s) and verb (-ing) forms.
@@ -52,18 +52,29 @@ const parseArticle = (text, reviewWords = []) => {
 };
 
 const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articlesReadCount }) => {
-  const [article, setArticle] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [popup, setPopup] = useState({ visible: false, content: '', x: 0, y: 0 })
+  const [rawArticle, setRawArticle] = useState('');
+  const [articleTitle, setArticleTitle] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [popup, setPopup] = useState({ visible: false, content: '', x: 0, y: 0 });
   const [isFinishing, setIsFinishing] = useState(false);
-  const contentRef = useRef(null)
-  const popupRef = useRef(null); // Ref for the popup element
+  const [clickedWords, setClickedWords] = useState(new Set());
+  const contentRef = useRef(null);
+  const popupRef = useRef(null);
 
-  const processArticleContent = (htmlString) => {
-    if (typeof window === 'undefined') return htmlString;
+  const finalContent = useMemo(() => {
+    if (typeof window === 'undefined' || !rawArticle) return '';
+    
+    let content = rawArticle;
+    const titleRegex = /^\s*\*\*(.*?)\*\*/;
+    content = content.replace(titleRegex, '').trim();
+    
+    const highlightedContent = content.replace(/\*\*(.*?)\*\*/g, (match, word) => {
+      return `<span class="highlight">${word}</span>`;
+    });
+
     const container = document.createElement('div');
-    container.innerHTML = htmlString;
+    container.innerHTML = highlightedContent;
 
     const walk = (node) => {
       if (node.nodeType === 3) { // Text node
@@ -74,6 +85,9 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
             const span = document.createElement('span');
             span.style.cursor = 'pointer';
             span.textContent = part;
+            if (clickedWords.has(part.toLowerCase())) {
+              span.style.color = 'red';
+            }
             fragment.appendChild(span);
           } else {
             fragment.appendChild(document.createTextNode(part));
@@ -82,7 +96,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
         if (node.parentNode) {
           node.parentNode.replaceChild(fragment, node);
         }
-      } else if (node.nodeType === 1) {
+      } else if (node.nodeType === 1) { // Element node
         if (node.tagName === 'SPAN' && node.classList.contains('highlight')) {
             node.style.cursor = 'pointer';
         }
@@ -92,11 +106,14 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
 
     walk(container);
     return container.innerHTML;
-  };
+  }, [rawArticle, clickedWords]);
+
 
   useEffect(() => {
     let isMounted = true
-    setArticle('')
+    setRawArticle('')
+    setArticleTitle('');
+    setClickedWords(new Set());
     setLoading(true)
     setError(null)
 
@@ -107,15 +124,18 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     const flushBuffer = () => {
       if (buffer.length > 0 && isMounted) {
         result += buffer
-        const { title, highlightedContent } = parseArticle(result, log.daily_review_words);
-        const finalContent = processArticleContent(highlightedContent);
-        setArticle({ title, finalContent });
+        const titleRegex = /^\s*\*\*(.*?)\*\*/;
+        const match = result.match(titleRegex);
+        if (match && match[1]) {
+          setArticleTitle(match[1]);
+        }
+        setRawArticle(result);
         buffer = ''
       }
       timeoutId = null
     }
 
-    fetch(`https://masterwordai.com/api/generation/${log.id}`, {
+    fetch(`api/generation/${log.id}`, {
       method: 'POST',
     }).then(response => {
       if (!response.body) throw new Error('No stream')
@@ -152,13 +172,13 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
       isMounted = false
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [log.id, log.daily_review_words])
+  }, [log.id])
 
   useEffect(() => {
     // if (contentRef.current) {
     //   contentRef.current.scrollTop = contentRef.current.scrollHeight
     // }
-  }, [article])
+  }, [articleTitle])
 
   // Effect to handle clicks outside the popup
   useEffect(() => {
@@ -186,6 +206,8 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     const word = target.innerText.trim().toLowerCase().replace(/[.,!?:;]$/, '');
 
     if (word && word.length > 1 && !/^\d+$/.test(word)) {
+      setClickedWords(prev => new Set(prev).add(word));
+
       const rect = target.getBoundingClientRect();
       let x = rect.left + (rect.width / 2);
       let y = rect.bottom + window.scrollY;
@@ -197,7 +219,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
       setPopup({ visible: true, content: 'Searching...', x, y });
 
       try {
-        const response = await fetch(`https://masterwordai.com/api/word_search/${log.id}/${word}`);
+        const response = await fetch(`api/word_search/${log.id}/${word}`);
         if (!response.ok) throw new Error('Word not found');
         const resultText = await response.text();
         setPopup(p => ({ ...p, content: resultText, visible: true }));
@@ -210,7 +232,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   const handleFinishClick = async () => {
     setIsFinishing(true);
     try {
-      const response = await fetch(`https://masterwordai.com/api/finish_reading/${log.id}`, {
+      const response = await fetch(`api/finish_reading/${log.id}`, {
         method: 'POST',
       });
       if (!response.ok) {
@@ -226,7 +248,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   const handleFinishEarlyClick = async () => {
     setIsFinishing(true);
     try {
-      const response = await fetch(`https://masterwordai.com/api/finish_reading/${log.id}`, {
+      const response = await fetch(`api/finish_reading/${log.id}`, {
         method: 'POST',
       });
       if (!response.ok) {
@@ -238,8 +260,6 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
       setIsFinishing(false);
     }
   };
-
-  const { title, finalContent } = article || { title: '', finalContent: '' };
   
   const articlesPerDay = dailyGoal / 10;
   const isLastArticle = articlesReadCount + 1 >= articlesPerDay;
@@ -247,14 +267,21 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   return (
     <div className="main-bg">
       <div className="reading-card">
-        {title && <h2 className="reading-title">{title}</h2>}
+        <div className="reading-info-bar">
+          tips: 请阅读文章并查询不认识的单词，我们会根据您的反馈提供个性化的学习体验
+        </div>
+        <h2 className="reading-title">{articleTitle || '\u00A0'}</h2>
         <div 
           className="reading-content" 
           ref={contentRef} 
           onClick={handleWordSelection}
-          dangerouslySetInnerHTML={{ __html: (finalContent || '').replace(/\n/g, '<br />') }} 
-        />
-        {loading && !finalContent && <div className="reading-loading">正在生成文章...</div>}
+        >
+          {loading && !finalContent ? (
+            <div className="reading-loading">正在生成文章...</div>
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: (finalContent || '').replace(/\n/g, '<br />') }} />
+          )}
+        </div>
         {error && <div className="reading-error">{error}</div>}
         
         <div className="reading-footer">

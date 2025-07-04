@@ -190,8 +190,8 @@ html, body {
   /* background: #ffffff; */ /* This was the previous attempt */
   border-radius: 18px;
   box-shadow: 0 2px 12px 0 rgba(100, 149, 237, 0.10);
-  width: 92vw;
-  max-width: 350px;
+  width: 90vw;
+  max-width: 340px;
   min-height: 120px;
   padding: 20px 25px 14px 25px;
   display: flex;
@@ -203,6 +203,21 @@ html, body {
 }
 .study-card:hover {
   box-shadow: 0 4px 18px 0 rgba(100, 149, 237, 0.16);
+}
+
+.study-info-bar {
+  background-color: #ffffff;
+  color: rgb(100, 149, 237);
+  padding: 12px 15px;
+  border-radius: 18px;
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  font-weight: 500;
+  width: 90vw;
+  max-width: 340px;
+  box-sizing: border-box;
+  border: 1px solid #eee;
 }
 
 .study-title {
@@ -262,6 +277,18 @@ html, body {
   padding: 24px 18px 0 18px;
 }
 
+.reading-info-bar {
+  background-color: #f0f4ff;
+  color: rgb(100, 149, 237);
+  padding: 10px 15px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
 .reading-back {
   position: absolute;
   top: 16px;
@@ -294,10 +321,11 @@ html, body {
   color: rgb(100, 149, 237);
   font-weight: normal;
   text-align: center;
-  margin: 30px 0 15px 0;
+  margin: 0 0 15px 0;
   padding: 0 12px;
   line-height: 1.4;
   flex-shrink: 0;
+  min-height: 1.4em; /* Corresponds to line-height to prevent jump */
 }
 
 .highlight {
@@ -314,6 +342,10 @@ html, body {
   text-align: center;
   margin-top: 24px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
 }
 
 .reading-error {

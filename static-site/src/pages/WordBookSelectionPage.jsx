@@ -38,7 +38,7 @@ export default function WordBookSelectionPage({ onSelectionSuccess, onBack }) {
     }
 
     try {
-      const response = await fetch(`https://masterwordai.com/api/account_initiation/${userData.id}/${selectedBook}/${selectedGoal}`, {
+      const response = await fetch(`api/account_initiation/${userData.id}/${selectedBook}/${selectedGoal}`, {
         method: 'POST', // Assuming POST, as it's an initiation action.
       });
 

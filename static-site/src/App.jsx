@@ -46,7 +46,7 @@ function App() {
     
     setLoading(true);
     setError(null);
-    fetch(`https://masterwordai.com/api/daily_learning_logs/${userId}`)
+    fetch(`api/daily_learning_logs/${userId}`)
       .then(res => res.json())
       .then(json => {
         setData(json)

@@ -41,7 +41,7 @@ export default function HomePage({ data, loading, error, onStartStudy, onChangeW
     }
 
     try {
-      const response = await fetch(`https://masterwordai.com/api/set_daily_goal/${userData.id}/${newGoal}`, {
+      const response = await fetch(`api/set_daily_goal/${userData.id}/${newGoal}`, {
         method: 'POST',
       });
       if (!response.ok) {
