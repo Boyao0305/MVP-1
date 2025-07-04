@@ -341,7 +341,6 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
                         joinedload(models.Learning_log.daily_review_words),
                     )
                     .filter(
-                        models.Learning_log.date == target_date,
                         models.Learning_log.id == log_id,)
                     .first()
 
