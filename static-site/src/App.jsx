@@ -22,20 +22,49 @@ function App() {
   const [readLogIds, setReadLogIds] = useState([]);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const user = await getUser();
-      if (user && user.id) {
-        setUserData(user);
-        // This part is tricky. If they have user data, are they 'authenticated' or 'needs_selection'?
-        // For now, let's assume if they exist, they are authenticated.
-        // The logic might need to be adjusted based on whether they have completed the word book selection.
-        // A simple way is to check if a learning log exists.
-        setAuthStatus('authenticated');
-      } else {
-        setAuthStatus('unauthenticated');
+    const checkAuthAndVersion = async () => {
+      try {
+        const versionResponse = await fetch('api/version');
+        if (!versionResponse.ok) {
+          throw new Error('无法连接到服务器以验证版本。');
+        }
+        const serverVersionData = await versionResponse.json();
+        const serverVersion = serverVersionData.version;
+
+        const localVersion = localStorage.getItem('app_version');
+
+        if (localVersion) {
+          if (localVersion !== serverVersion) {
+            localStorage.clear();
+            localStorage.setItem('app_version', serverVersion);
+            setUserData(null);
+            setData(null);
+            setAuthStatus('unauthenticated');
+            setAuthPage('register');
+            return;
+          }
+        } else {
+          localStorage.clear();
+          localStorage.setItem('app_version', serverVersion);
+          setAuthStatus('unauthenticated');
+          setAuthPage('register');
+          return;
+        }
+        
+        const user = await getUser();
+        if (user && user.id) {
+          setUserData(user);
+          setAuthStatus('authenticated');
+        } else {
+          setAuthStatus('unauthenticated');
+        }
+      } catch (e) {
+        setError('加载失败，请检查您的网络连接。');
+        setAuthStatus('unauthenticated'); // Fallback to a safe state
       }
     };
-    checkAuth();
+
+    checkAuthAndVersion();
   }, []);
 
   const fetchLearningData = (userId) => {
@@ -164,7 +193,11 @@ function App() {
   
   if (page === 'study') {
     const logs = (data?.logs || []).filter(l => !readLogIds.includes(l.id));
-    return <StudyPage logs={logs} onSelect={(logId) => { setReadingLogId(logId); setPage('reading') }} />
+    return <StudyPage 
+      logs={logs} 
+      onSelect={(logId) => { setReadingLogId(logId); setPage('reading') }} 
+      onBack={() => setPage('home')}
+    />
   }
 
   if (page === 'reading' && readingLogId) {

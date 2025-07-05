@@ -187,7 +187,7 @@ PROMPT_TMPL_ARTICLE = (
     "Outline = {outline}\n"
     "Vocabulary = {vocab}\n"
     "You are also required to make the article easy to read for the user with the level "
-    "of {CEFR}. Please only return the title and the article itself, marked the title and the demanded words"
+    "of {CEFR}. Please only return the title and the article itself, marked the title and the demanded words like this: **example_word**"
 )
 
 # ---------- endpoint -------------------------------------------------------

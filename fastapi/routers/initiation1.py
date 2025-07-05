@@ -118,9 +118,11 @@ async def run_daily_pipeline(
         ],
     }
 
-
-
-# @router.post("/assign_word_book/{user_id}/{word_book_id}", response_model=schemas.Learning_settings)
+DATABASE_VERSION = "v1.0.0"
+@router.get("/version")
+def get_version():
+    return {"version": DATABASE_VERSION}
+# @router.post("/assign_word_book/{user_id}/{word_book_id}", respons    e_model=schemas.Learning_settings)
 # def assign_word_book(user_id: int, word_book_id: int, db: Session = Depends(get_db)):
 #     setting = db.query(models.Learning_setting).filter(models.Learning_setting.user_id == user_id).first()
 #     if not setting:
