@@ -56,25 +56,20 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   const [articleTitle, setArticleTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [popup, setPopup] = useState({ visible: false, content: '', x: 0, y: 0 });
+  const [popup, setPopup] = useState({ visible: false, type: 'definition', content: '', x: 0, y: 0, word: null });
+  const [queryButton, setQueryButton] = useState({ visible: false, text: '', rect: null });
+  const [phrasePopup, setPhrasePopup] = useState({ visible: false, content: '', x: 0, y: 0 });
   const [isFinishing, setIsFinishing] = useState(false);
   const [clickedWords, setClickedWords] = useState(new Set());
   const contentRef = useRef(null);
   const popupRef = useRef(null);
+  const queryButtonRef = useRef(null);
+  const phrasePopupRef = useRef(null);
 
-  const finalContent = useMemo(() => {
-    if (typeof window === 'undefined' || !rawArticle) return '';
-    
-    let content = rawArticle;
-    const titleRegex = /^\s*\*\*(.*?)\*\*/;
-    content = content.replace(titleRegex, '').trim();
-    
-    const highlightedContent = content.replace(/\*\*(.*?)\*\*/g, (match, word) => {
-      return `<span class="highlight">${word}</span>`;
-    });
-
+  const processTextForClicking = (htmlString, clickedWords) => {
+    if (typeof window === 'undefined' || !htmlString) return '';
     const container = document.createElement('div');
-    container.innerHTML = highlightedContent;
+    container.innerHTML = htmlString;
 
     const walk = (node) => {
       if (node.nodeType === 3) { // Text node
@@ -98,7 +93,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
         }
       } else if (node.nodeType === 1) { // Element node
         if (node.tagName === 'SPAN' && node.classList.contains('highlight')) {
-            node.style.cursor = 'pointer';
+          node.style.cursor = 'pointer';
         }
         Array.from(node.childNodes).forEach(walk);
       }
@@ -106,7 +101,36 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
 
     walk(container);
     return container.innerHTML;
+  }
+
+  const searchWord = async (word, x, y) => {
+    setPopup({ visible: true, type: 'definition', content: 'Searching...', x, y, word });
+
+    try {
+      const response = await fetch(`api/word_search/${log.id}/${word}`);
+      if (!response.ok) throw new Error('Word not found');
+      const resultText = await response.text();
+      setPopup(p => ({ ...p, content: resultText, visible: true }));
+    } catch (err) {
+      setPopup(p => ({ ...p, content: 'Definition not found.', visible: true }));
+    }
+  };
+
+  const finalContent = useMemo(() => {
+    if (!rawArticle) return '';
+    let content = rawArticle;
+    const titleRegex = /^\s*\*\*(.*?)\*\*/;
+    content = content.replace(titleRegex, '').trim();
+    const highlightedContent = content.replace(/\*\*(.*?)\*\*/g, (match, word) => {
+      return `<span class="highlight">${word}</span>`;
+    });
+    return processTextForClicking(highlightedContent, clickedWords);
   }, [rawArticle, clickedWords]);
+
+  const clickableTitle = useMemo(() => {
+    if (!articleTitle) return '\u00A0';
+    return processTextForClicking(articleTitle, clickedWords);
+  }, [articleTitle, clickedWords]);
 
 
   useEffect(() => {
@@ -175,58 +199,102 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   }, [log.id])
 
   useEffect(() => {
-    // if (contentRef.current) {
-    //   contentRef.current.scrollTop = contentRef.current.scrollHeight
-    // }
-  }, [articleTitle])
+    const handleInteractionEnd = () => {
+      // Use a short timeout to allow the browser's selection to update fully.
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (!selection) return;
 
-  // Effect to handle clicks outside the popup
+        // Case 1: A range of text was selected (phrase search).
+        if (selection.type === 'Range') {
+          const selectedText = selection.toString().trim();
+          if (selectedText.length > 0) {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            setQueryButton({ visible: true, text: selectedText, rect });
+            // Hide other popups to avoid overlap.
+            setPopup({ visible: false, type: 'definition', content: '', x: 0, y: 0, word: null });
+          }
+          return; // Stop processing to avoid conflicts.
+        }
+
+        // Case 2: A single point was clicked (word search).
+        if (selection.type === 'Caret') {
+          const parentElement = selection.anchorNode.parentElement;
+          // Ensure the click was on a clickable word span.
+          if (parentElement && parentElement.tagName === 'SPAN' && parentElement.style.cursor === 'pointer') {
+            const word = parentElement.innerText.trim().toLowerCase().replace(/[.,!?:;]$/, '');
+
+            if (word && word.length > 1 && !/^\d+$/.test(word)) {
+              const rect = parentElement.getBoundingClientRect();
+              let x = rect.left + (rect.width / 2);
+              let y = rect.bottom + window.scrollY;
+              
+              const popupWidth = 220;
+              if (x - (popupWidth / 2) < 10) x = (popupWidth / 2) + 10;
+              if (x + (popupWidth / 2) > window.innerWidth - 10) x = window.innerWidth - (popupWidth / 2) - 10;
+              
+              setQueryButton({ visible: false, text: '', rect: null });
+
+              if (clickedWords.has(word)) {
+                setPopup({ visible: true, type: 'options', word: word, x, y, content: '' });
+              } else {
+                setClickedWords(prev => new Set(prev).add(word));
+                searchWord(word, x, y);
+              }
+            }
+          }
+        }
+      }, 50);
+    };
+
+    document.addEventListener('mouseup', handleInteractionEnd);
+    document.addEventListener('touchend', handleInteractionEnd);
+    return () => {
+      document.removeEventListener('mouseup', handleInteractionEnd);
+      document.removeEventListener('touchend', handleInteractionEnd);
+    };
+  }, [clickedWords]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (popupRef.current && !popupRef.current.contains(event.target)) {
-        setPopup(p => ({ ...p, visible: false }));
+      if (
+        popupRef.current?.contains(event.target) ||
+        queryButtonRef.current?.contains(event.target) ||
+        phrasePopupRef.current?.contains(event.target)
+      ) {
+        return;
       }
+      setPopup(p => ({ ...p, visible: false }));
+      setQueryButton(q => ({ ...q, visible: false }));
+      setPhrasePopup(p => ({ ...p, visible: false }));
     };
 
-    if (popup.visible) {
-      document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleRemoveMark = async () => {
+    if (!popup.word) return;
+    const wordToRemove = popup.word;
+    
+    setClickedWords(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(wordToRemove);
+      return newSet;
+    });
+    setPopup({ visible: false, type: 'definition', content: '', x: 0, y: 0, word: null });
+    
+    try {
+      await fetch(`api/word_unsearch/${log.id}/${wordToRemove}`);
+    } catch (err) {
+      console.error("Failed to unsearch word:", err);
     }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [popup.visible]);
-
-  const handleWordSelection = async (event) => {
-    const target = event.target;
-    if (target.tagName !== 'SPAN' || !target.style.cursor) {
-      return;
-    }
-
-    const word = target.innerText.trim().toLowerCase().replace(/[.,!?:;]$/, '');
-
-    if (word && word.length > 1 && !/^\d+$/.test(word)) {
-      setClickedWords(prev => new Set(prev).add(word));
-
-      const rect = target.getBoundingClientRect();
-      let x = rect.left + (rect.width / 2);
-      let y = rect.bottom + window.scrollY;
-
-      const popupWidth = 220;
-      if (x - (popupWidth / 2) < 10) x = (popupWidth / 2) + 10;
-      if (x + (popupWidth / 2) > window.innerWidth - 10) x = window.innerWidth - (popupWidth / 2) - 10;
-
-      setPopup({ visible: true, content: 'Searching...', x, y });
-
-      try {
-        const response = await fetch(`api/word_search/${log.id}/${word}`);
-        if (!response.ok) throw new Error('Word not found');
-        const resultText = await response.text();
-        setPopup(p => ({ ...p, content: resultText, visible: true }));
-      } catch (err) {
-        setPopup(p => ({ ...p, content: 'Definition not found.', visible: true }));
-      }
-    }
+  };
+  
+  const handleSearchAgain = async () => {
+      if (!popup.word) return;
+      await searchWord(popup.word, popup.x, popup.y);
   };
 
   const handleFinishClick = async () => {
@@ -264,17 +332,57 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   const articlesPerDay = dailyGoal / 10;
   const isLastArticle = articlesReadCount + 1 >= articlesPerDay;
 
+  const handlePhraseSearch = async () => {
+    const text = queryButton.text;
+    const rect = queryButton.rect;
+    if (!text || !rect) return;
+
+    setQueryButton({ visible: false, text: '', rect: null });
+
+    let x = rect.left + (rect.width / 2);
+    let y = rect.bottom + window.scrollY;
+    const popupWidth = 220;
+    if (x - popupWidth / 2 < 10) x = popupWidth / 2 + 10;
+    if (x + popupWidth / 2 > window.innerWidth - 10) x = window.innerWidth - popupWidth / 2 - 10;
+    
+    setPhrasePopup({ visible: true, content: 'Searching...', x, y });
+
+    const category = text.split(/\s+/).length > 5 ? 'phrase' : 'word_group';
+    
+    try {
+      const response = await fetch(`api/content_search/${category}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: text })
+      });
+      if (!response.body) throw new Error('No stream');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let result = '';
+      setPhrasePopup(p => ({ ...p, content: '' }));
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        result += chunk;
+        setPhrasePopup(p => ({ ...p, content: result }));
+      }
+    } catch (err) {
+      setPhrasePopup(p => ({ ...p, content: 'Search failed.' }));
+    }
+  };
+
   return (
     <div className="main-bg">
       <div className="reading-card">
         <div className="reading-info-bar">
           tips: 请阅读文章并查询不认识的单词，我们会根据您的反馈提供个性化的学习体验
         </div>
-        <h2 className="reading-title">{articleTitle || '\u00A0'}</h2>
-        <div 
-          className="reading-content" 
-          ref={contentRef} 
-          onClick={handleWordSelection}
+        <h2 className="reading-title" dangerouslySetInnerHTML={{ __html: clickableTitle }} />
+        <div
+          className="reading-content"
         >
           {loading && !finalContent ? (
             <div className="reading-loading">正在生成文章...</div>
@@ -311,7 +419,39 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
           style={{ top: `${popup.y + 10}px`, left: `${popup.x}px` }}
           onMouseUp={e => e.stopPropagation()}
         >
-          {popup.content}
+          {popup.type === 'options' ? (
+            <div className="popup-options">
+              <button onClick={handleRemoveMark} className="popup-option-btn">消除标记</button>
+              <button onClick={handleSearchAgain} className="popup-option-btn">再查一遍</button>
+            </div>
+          ) : (
+            popup.content
+          )}
+        </div>
+      )}
+
+      {queryButton.visible && (
+        <button
+          ref={queryButtonRef}
+          className="query-btn"
+          style={{
+            top: `${queryButton.rect.bottom + window.scrollY + 5}px`,
+            left: `${queryButton.rect.left + window.scrollX + (queryButton.rect.width / 2) - 40}px`,
+          }}
+          onClick={handlePhraseSearch}
+        >
+          查询
+        </button>
+      )}
+
+      {phrasePopup.visible && (
+        <div
+          ref={phrasePopupRef}
+          className="word-popup"
+          style={{ top: `${phrasePopup.y + 10}px`, left: `${phrasePopup.x}px` }}
+          onMouseUp={e => e.stopPropagation()}
+        >
+          {phrasePopup.content}
         </div>
       )}
     </div>

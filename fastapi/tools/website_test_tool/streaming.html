@@ -19,12 +19,12 @@
       output.textContent = 'Sending POST and waiting for stream...\n';
 
       try {
-        const response = await fetch('http://localhost/api/generation/5/380', {
+        const response = await fetch(' http://localhost/api/content_search/word_group', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({}) // Include body data here if required by the API
+          body: JSON.stringify({"content": "The digital age has changed how we live, from the way we enjoy our morning coffee to how we expend energy. Smart machines brew perfect cups while apps track our workouts. But this revolution goes beyond convenience—it’s reshaping how we think, work, and solve problems."}) // Include body data here if required by the API
         });
 
         if (!response.ok) {

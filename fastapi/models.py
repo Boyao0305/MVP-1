@@ -19,6 +19,7 @@ class User(Base):
     l_learning_setting = relationship("Learning_setting", back_populates="l_user", uselist=False)
 
     l_learning_logs = relationship("Learning_log", back_populates="l_user")
+    l_saved_phrases = relationship("Saved_phrase", back_populates="l_user")
 
 class Invitation_code(Base):
     __tablename__ = "invitation_codes"
@@ -97,6 +98,21 @@ class Learning_setting(Base):
     daily_goal = Column(Integer, default=15)
 
     l_user = relationship("User", back_populates="l_learning_setting")
+
+class Saved_phrase(Base):
+    __tablename__ = "saved_phrases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(String(1000), nullable=False)
+    translation = Column(String(1000))
+    explication = Column(String(1000))
+    category = Column(String(30), index=True)
+
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    l_user = relationship("User", back_populates="l_saved_phrases")
+
+
+
 
 class Learning_log(Base):
     __tablename__ = "learning_logs"

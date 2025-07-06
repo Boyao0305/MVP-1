@@ -512,3 +512,53 @@ def read_learning_words(
 #     #     .all()
 #     # )
 #     return 1
+@router.post("/words_ed/")
+def word_ed(db: Session = Depends(get_db)):
+    words = db.query(models.Word).filter(models.Word.word.endswith("ed")).all()
+    # if not words:
+    #     raise HTTPException(status_code=404, detail="User not found")
+    # result = []
+
+    result = [word.definition for word in words]
+
+    return {"definitions": result}
+
+import time
+memory_cache = {}
+def compute_expensive_data(item_id: int) -> str:
+    time.sleep(3)  # Simulate slow computation
+    return f"Computed result for item {item_id}"
+
+@router.get("/expensive/{item_id}")
+def get_item(item_id: int):
+    # Check if result already cached
+    # if item_id in memory_cache:
+    #     return {
+    #         "cached": True,
+    #         "result": memory_cache[item_id]
+    #     }
+
+    # Otherwise compute and cache the result
+    result = compute_expensive_data(item_id)
+    memory_cache[item_id] = result
+    return {
+        "cached": False,
+        "result": result
+    }
+@router.get("/expensive2/{item_id}")
+def get_item(item_id: int):
+
+    if item_id in memory_cache:
+        return {
+            "cached": True,
+            "result": memory_cache[item_id]
+        }
+    else:
+        return "none"
+
+@router.get("/clear_cache/{item_id}")
+def clear_specific_cache(item_id: int):
+    if item_id in memory_cache:
+        del memory_cache[item_id]
+        return {"message": f"Cache for item {item_id} cleared"}
+    return {"message": f"No cache found for item {item_id}"}
