@@ -466,12 +466,11 @@ html, body {
   box-shadow: 0 4px 30px rgba(0,0,0,0.1);
   width: 90vw;
   max-width: 600px;
-  max-height: 85vh;
-  padding: 25px 20px;
+  max-height: 80vh;
+  padding: 25px 30px;
   position: relative;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
 
 .explanation-modal-close-btn {

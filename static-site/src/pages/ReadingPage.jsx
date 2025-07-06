@@ -60,7 +60,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   const [isFinishing, setIsFinishing] = useState(false);
   const [clickedWords, setClickedWords] = useState(new Set());
   const [explanationModal, setExplanationModal] = useState({ visible: false, phrase: '', explanation: '' });
-  const isMouseDownRef = useRef(false);
+  const isInteractingRef = useRef(false);
   const contentRef = useRef(null);
   const popupRef = useRef(null);
 
@@ -229,7 +229,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     let timeoutId = null
 
     const flushBuffer = () => {
-      if (isMouseDownRef.current) {
+      if (isInteractingRef.current) {
         timeoutId = setTimeout(flushBuffer, 100);
         return;
       }
@@ -308,8 +308,12 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     };
   }, [popup.visible]);
 
-  const handleInteraction = async (event) => {
-    isMouseDownRef.current = false;
+  const handleInteractionStart = () => {
+    isInteractingRef.current = true;
+  };
+
+  const handleInteractionEnd = async (event) => {
+    isInteractingRef.current = false;
     
     // 1. Check for phrase selection
     const selection = window.getSelection();
@@ -428,10 +432,10 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     <div className="main-bg">
       <div 
         className="reading-card" 
-        onMouseDown={() => { isMouseDownRef.current = true; }}
-        onMouseUp={handleInteraction}
-        onTouchStart={() => { isMouseDownRef.current = true; }}
-        onTouchEnd={handleInteraction}
+        onMouseDown={handleInteractionStart}
+        onMouseUp={handleInteractionEnd}
+        onTouchStart={handleInteractionStart}
+        onTouchEnd={handleInteractionEnd}
       >
         <div className="reading-info-bar">
           tips: 请阅读文章并查询不认识的单词，我们会根据您的反馈提供个性化的学习体验
