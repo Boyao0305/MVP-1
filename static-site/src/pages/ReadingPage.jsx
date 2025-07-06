@@ -317,23 +317,6 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     // }
   }, [articleTitle])
 
-  // Effect to handle clicks outside the popup
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (popupRef.current && !popupRef.current.contains(event.target)) {
-        setPopup(p => ({ ...p, visible: false }));
-      }
-    };
-
-    if (popup.visible) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [popup.visible]);
-
   useEffect(() => {
     if (showSelectionToast) {
       const timer = setTimeout(() => setShowSelectionToast(false), 4000);
@@ -538,29 +521,34 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
 
       {/* Popups for word definitions, options, and phrase results */}
       {popup.visible && popup.type !== 'phrase-search' && (
-        <div 
-          className="word-popup" 
-          ref={popupRef} 
-          style={{ top: `${popup.y + 10}px`, left: `${popup.x}px` }}
-          onMouseUp={e => e.stopPropagation()}
-        >
-          {popup.type === 'options' && (
-            <div className="popup-options">
-              <button onClick={handleRemoveMark} className="popup-option-btn">消除标记</button>
-              <button onClick={handleSearchAgain} className="popup-option-btn">再查一遍</button>
-            </div>
-          )}
-          {popup.type === 'definition' && popup.content}
-          {popup.type === 'phrase-result' && (
-            <div>
-              {popup.content}
-              {!popup.isStreaming && popup.phrase && popup.phrase.split(/\s+/).length > 5 && (
-                <button onClick={handlePhraseExplanation} className="popup-explain-btn">
-                  深度解析
-                </button>
+        <div className="explanation-modal-overlay">
+          <div className="word-popup" ref={popupRef}>
+            <button
+              onClick={() => setPopup(p => ({...p, visible: false}))}
+              className="explanation-modal-close-btn"
+            >
+              &times;
+            </button>
+            <div className="word-popup-content">
+              {popup.type === 'options' && (
+                <div className="popup-options">
+                  <button onClick={handleRemoveMark} className="popup-option-btn">消除标记</button>
+                  <button onClick={handleSearchAgain} className="popup-option-btn">再查一遍</button>
+                </div>
+              )}
+              {popup.type === 'definition' && popup.content}
+              {popup.type === 'phrase-result' && (
+                <div>
+                  {popup.content}
+                  {!popup.isStreaming && popup.phrase && popup.phrase.split(/\s+/).length > 5 && (
+                    <button onClick={handlePhraseExplanation} className="popup-explain-btn">
+                      深度解析
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
       )}
 

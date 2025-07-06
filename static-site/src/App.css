@@ -426,19 +426,24 @@ html, body {
 }
 
 .word-popup {
-  position: absolute;
-  transform: translateX(-50%);
   background-color: #ffffff;
   color: #002d7a;
-  padding: 10px 14px;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  font-size: 0.9rem;
-  max-width: 220px;
+  padding: 25px 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+  width: 90vw;
+  max-width: 450px;
+  max-height: 70vh;
   text-align: left;
-  z-index: 100;
   border: 1.5px solid rgb(100, 149, 237);
   line-height: 1.5;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.word-popup-content {
+  overflow-y: auto;
 }
 
 .popup-options {
