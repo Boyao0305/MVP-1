@@ -51,12 +51,12 @@ function App() {
           return;
         }
         
-        const user = await getUser();
-        if (user && user.id) {
-          setUserData(user);
-          setAuthStatus('authenticated');
-        } else {
-          setAuthStatus('unauthenticated');
+      const user = await getUser();
+      if (user && user.id) {
+        setUserData(user);
+        setAuthStatus('authenticated');
+      } else {
+        setAuthStatus('unauthenticated');
         }
       } catch (e) {
         setError('加载失败，请检查您的网络连接。');
@@ -214,6 +214,7 @@ function App() {
       onFinishEarly={handleFinishEarly}
       dailyGoal={dailyGoal}
       articlesReadCount={articlesReadCount}
+      userId={userData?.id}
     />
   }
 

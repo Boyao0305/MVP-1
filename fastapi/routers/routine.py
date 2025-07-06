@@ -580,6 +580,41 @@ async def llm_stream(category: str,req: LLMRequest):
                 yield chunk.choices[0].delta.content.encode()
 
     return StreamingResponse(token_gen(), media_type="text/plain")
+class LLMRequest2(BaseModel):
+    content: str
+    translation: str
+@router.post(
+    "/phrase_explanation/{user_id}",
+    response_class=StreamingResponse,
+    summary="Stream an LLM answer for the given content",
+)
+async def llm_stream(user_id: int, req: LLMRequest2):
+    """Forward `content` to the LLM and stream the raw answer back."""
+
+    # 1️⃣  initialise client (reuse a single instance in real apps)
+    client = OpenAI(
+        # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
+        api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
+        # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+    )
+
+    prompt_explication = f"请用中文相对简短得解释这个英语句子（长难句）的意思（分模块解释，而非直接给出翻译），再列出中的重要语法点（固定搭配，表达，词组等，请最多挑出3-4点做简短的解释. ）{req.content}"
+
+    # 2️⃣  start streaming call
+    stream = await async_client.chat.completions.create(
+        model="deepseek-v3",                # pick the model you like
+        messages=[{"role": "user", 'content': prompt_explication}],
+        stream=True,
+    )
+
+    # 3️⃣  forward tokens to the caller as they arrive
+    async def token_gen():
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content.encode()
+
+    return StreamingResponse(token_gen(), media_type="text/plain")
 # --------------------------- main endpoint -------------------------------
 @router.post(
     "/finish_reading/{log_id}",
