@@ -59,12 +59,19 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   const [popup, setPopup] = useState({ visible: false, type: 'definition', content: '', x: 0, y: 0, word: null, phrase: null, isStreaming: false, translation: '' });
   const [isFinishing, setIsFinishing] = useState(false);
   const [clickedWords, setClickedWords] = useState(new Set());
+  const [isPhraseSelectionMode, setIsPhraseSelectionMode] = useState(false);
+  const [phraseStartNodeId, setPhraseStartNodeId] = useState(null);
+  const [highlightedPhraseNodeIds, setHighlightedPhraseNodeIds] = useState([]);
+  const [explainedPhraseNodeIds, setExplainedPhraseNodeIds] = useState([]);
+  const [showSelectionToast, setShowSelectionToast] = useState(false);
   const [explanationModal, setExplanationModal] = useState({ visible: false, phrase: '', explanation: '' });
-  const isInteractingRef = useRef(false);
+  const isMouseDownRef = useRef(false);
   const contentRef = useRef(null);
+  const readingCardRef = useRef(null);
+  const wordCounter = useRef(0);
   const popupRef = useRef(null);
 
-  const processTextForClicking = (htmlString, clickedWords) => {
+  const processTextForClicking = (htmlString, clickedWords, startNodeId, highlightedIds, explainedIds) => {
     if (typeof window === 'undefined' || !htmlString) return '';
     const container = document.createElement('div');
     container.innerHTML = htmlString;
@@ -76,10 +83,21 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
         text.split(/([a-zA-Z'-]+)/g).forEach(part => {
           if (part.match(/^[a-zA-Z'-]+$/)) {
             const span = document.createElement('span');
+            const wordId = `word-${wordCounter.current++}`;
+            span.id = wordId;
             span.style.cursor = 'pointer';
             span.textContent = part;
             if (clickedWords.has(part.toLowerCase())) {
               span.style.color = 'red';
+            }
+            if (wordId === startNodeId) {
+              span.style.backgroundColor = 'rgba(100, 149, 237, 0.2)';
+            }
+            if (highlightedIds.includes(wordId)) {
+              span.style.backgroundColor = 'yellow';
+            }
+            if (explainedIds.includes(wordId)) {
+              span.classList.add('explained-phrase');
             }
             fragment.appendChild(span);
           } else {
@@ -98,6 +116,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     };
 
     walk(container);
+    wordCounter.current = 0;
     return container.innerHTML;
   }
 
@@ -118,6 +137,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     const phrase = popup.phrase;
     if (!phrase) return;
   
+    setHighlightedPhraseNodeIds([]);
     setPopup(p => ({ ...p, type: 'phrase-result', content: '', isStreaming: true }));
   
     const category = phrase.split(/\s+/).length > 5 ? 'phrase' : 'word_group';
@@ -163,6 +183,10 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   const handlePhraseExplanation = async () => {
     if (!userId || !popup.phrase || !popup.translation) return;
 
+    if (popup.phraseNodeIds && popup.phraseNodeIds.length > 0) {
+      setExplainedPhraseNodeIds(prev => [...new Set([...prev, ...popup.phraseNodeIds])]);
+    }
+
     const phraseToExplain = popup.phrase;
     const translation = popup.translation;
 
@@ -207,13 +231,15 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     const highlightedContent = content.replace(/\*\*(.*?)\*\*/g, (match, word) => {
       return `<span class="highlight">${word}</span>`;
     });
-    return processTextForClicking(highlightedContent, clickedWords);
-  }, [rawArticle, clickedWords]);
+    wordCounter.current = 0;
+    return processTextForClicking(highlightedContent, clickedWords, phraseStartNodeId, highlightedPhraseNodeIds, explainedPhraseNodeIds);
+  }, [rawArticle, clickedWords, phraseStartNodeId, highlightedPhraseNodeIds, explainedPhraseNodeIds]);
 
   const clickableTitle = useMemo(() => {
     if (!articleTitle) return '\u00A0';
-    return processTextForClicking(articleTitle, clickedWords);
-  }, [articleTitle, clickedWords]);
+    wordCounter.current = 0;
+    return processTextForClicking(articleTitle, clickedWords, phraseStartNodeId, highlightedPhraseNodeIds, explainedPhraseNodeIds);
+  }, [articleTitle, clickedWords, phraseStartNodeId, highlightedPhraseNodeIds, explainedPhraseNodeIds]);
 
 
   useEffect(() => {
@@ -229,7 +255,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     let timeoutId = null
 
     const flushBuffer = () => {
-      if (isInteractingRef.current) {
+      if (isMouseDownRef.current) {
         timeoutId = setTimeout(flushBuffer, 100);
         return;
       }
@@ -308,38 +334,55 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     };
   }, [popup.visible]);
 
-  const handleInteractionStart = () => {
-    isInteractingRef.current = true;
-  };
+  useEffect(() => {
+    if (showSelectionToast) {
+      const timer = setTimeout(() => setShowSelectionToast(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSelectionToast]);
 
-  const handleInteractionEnd = async (event) => {
-    isInteractingRef.current = false;
-    
-    // 1. Check for phrase selection
-    const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
-
-    if (selectedText.length > 0) {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      
-      setPopup({
-        visible: true,
-        type: 'phrase-search',
-        phrase: selectedText,
-        x: rect.left + rect.width / 2,
-        y: rect.bottom + window.scrollY,
-        content: '',
-        word: null,
-      });
-
-      selection.removeAllRanges();
+  const handleContentClick = async (event) => {
+    const target = event.target;
+    if (target.tagName !== 'SPAN' || !target.id.startsWith('word-')) {
+      if (isPhraseSelectionMode) {
+        setIsPhraseSelectionMode(false);
+        setPhraseStartNodeId(null);
+        setHighlightedPhraseNodeIds([]);
+      }
       return;
     }
 
-    // 2. Fallback to single word click
-    const target = event.target;
-    if (target.tagName !== 'SPAN' || !target.style.cursor) {
+    if (isPhraseSelectionMode) {
+      if (!phraseStartNodeId) {
+        setPhraseStartNodeId(target.id);
+      } else {
+        const allSpans = Array.from(readingCardRef.current.querySelectorAll('span[id^="word-"]'));
+        const startIndex = allSpans.findIndex(s => s.id === phraseStartNodeId);
+        const endIndex = allSpans.findIndex(s => s.id === target.id);
+
+        setPhraseStartNodeId(null);
+        setIsPhraseSelectionMode(false);
+
+        if (startIndex !== -1 && endIndex !== -1 && endIndex >= startIndex) {
+          const selectedSpans = allSpans.slice(startIndex, endIndex + 1);
+          const phrase = selectedSpans.map(s => s.textContent).join(' ');
+          const idsToHighlight = selectedSpans.map(s => s.id);
+          setHighlightedPhraseNodeIds(idsToHighlight);
+          
+          const rect = target.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.bottom + window.scrollY;
+
+          setPopup({
+            visible: true,
+            type: 'phrase-search',
+            phrase: phrase,
+            phraseNodeIds: idsToHighlight,
+            x, y,
+            content: '', word: null, isStreaming: false, translation: ''
+          });
+        }
+      }
       return;
     }
 
@@ -369,6 +412,19 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
       }
     }
   };
+
+  const handleTogglePhraseSelectionMode = () => {
+    setPopup({ visible: false });
+    setIsPhraseSelectionMode(prev => {
+      const newMode = !prev;
+      if (newMode) {
+        setShowSelectionToast(true);
+      }
+      return newMode;
+    });
+    setPhraseStartNodeId(null);
+    setHighlightedPhraseNodeIds([]);
+  }
 
   const handleRemoveMark = async () => {
     if (!popup.word) return;
@@ -430,13 +486,7 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
 
   return (
     <div className="main-bg">
-      <div 
-        className="reading-card" 
-        onMouseDown={handleInteractionStart}
-        onMouseUp={handleInteractionEnd}
-        onTouchStart={handleInteractionStart}
-        onTouchEnd={handleInteractionEnd}
-      >
+      <div className="reading-card" ref={readingCardRef} onClick={handleContentClick}>
         <div className="reading-info-bar">
           tips: 请阅读文章并查询不认识的单词，我们会根据您的反馈提供个性化的学习体验
         </div>
@@ -454,24 +504,37 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
         {error && <div className="reading-error">{error}</div>}
         
         <div className="reading-footer">
-          {isFinishing ? (
-            <button className="form-button" disabled>请稍候...</button>
-          ) : isLastArticle ? (
-            <button className="form-button" onClick={handleFinishClick} disabled={loading}>
-              完成今日学习
+          <div className="footer-main-actions">
+            {isFinishing ? (
+              <button className="form-button" disabled>请稍候...</button>
+            ) : isLastArticle ? (
+              <button className="form-button" onClick={handleFinishClick} disabled={loading}>
+                完成今日学习
+              </button>
+            ) : (
+              <div className="btn-row" style={{ justifyContent: 'space-around', width: '100%' }}>
+                <button className="btn-outline" onClick={handleFinishEarlyClick} disabled={loading}>
+                  提前完成学习
+                </button>
+                <button className="btn-main" onClick={handleFinishClick} disabled={loading} style={{ flexGrow: 1, marginLeft: '12px' }}>
+                  继续阅读
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="footer-secondary-actions">
+            <button onClick={handleTogglePhraseSelectionMode} className={`select-phrase-btn ${isPhraseSelectionMode ? 'active' : ''}`}>
+              {isPhraseSelectionMode ? '取消选择' : '选择句子翻译'}
             </button>
-          ) : (
-            <div className="btn-row" style={{ justifyContent: 'space-around', width: '100%' }}>
-              <button className="btn-outline" onClick={handleFinishEarlyClick} disabled={loading}>
-                提前完成学习
-              </button>
-              <button className="btn-main" onClick={handleFinishClick} disabled={loading} style={{ flexGrow: 1, marginLeft: '12px' }}>
-                继续阅读
-              </button>
-            </div>
-          )}
+          </div>
         </div>
       </div>
+
+      {showSelectionToast && (
+        <div className="selection-toast">
+          点击选择句子的首尾以翻译句子
+        </div>
+      )}
 
       {/* Popups for word definitions, options, and phrase results */}
       {popup.visible && popup.type !== 'phrase-search' && (

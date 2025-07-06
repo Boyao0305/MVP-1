@@ -339,12 +339,70 @@ html, body {
   min-height: 1.4em; /* Corresponds to line-height to prevent jump */
 }
 
+.reading-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.select-phrase-btn {
+  background: none;
+  border: 1px solid rgb(100, 149, 237);
+  color: rgb(100, 149, 237);
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.select-phrase-btn:hover {
+  background-color: rgba(100, 149, 237, 0.08);
+}
+
+.select-phrase-btn.active {
+  background-color: rgb(100, 149, 237);
+  color: #fff;
+}
+
+.selection-toast {
+  position: fixed;
+  bottom: 35vh;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #f0f4ff;
+  color: rgb(100, 149, 237);
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1001;
+  font-size: 0.9rem;
+  pointer-events: none;
+  animation: fadeInOut 4s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  10%, 90% { opacity: 1; }
+}
+
+.explained-phrase {
+  text-decoration: underline;
+  text-decoration-color: rgb(173, 255, 47);
+  text-decoration-thickness: 1px;
+}
+
 .highlight {
   color: rgb(100, 149, 237);
   background-color: transparent;
   padding: 0;
   border-radius: 0;
   font-weight: inherit;
+  flex-shrink: 0;
 }
 
 .reading-loading {
@@ -686,11 +744,12 @@ html, body {
 }
 
 .reading-footer {
-  padding: 20px;
+  padding: 15px 20px;
   background: #fff;
   border-top: 1px solid #eee;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
   border-bottom-left-radius: 24px;
   border-bottom-right-radius: 24px;
   flex-shrink: 0;
