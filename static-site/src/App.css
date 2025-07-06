@@ -426,24 +426,18 @@ html, body {
 }
 
 .word-popup {
+  position: absolute;
   background-color: #ffffff;
   color: #002d7a;
-  padding: 25px 30px;
-  border-radius: 16px;
-  box-shadow: 0 4px 30px rgba(0,0,0,0.1);
-  width: 90vw;
-  max-width: 450px;
-  max-height: 70vh;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  font-size: 0.9rem;
+  max-width: 220px;
   text-align: left;
+  z-index: 100;
   border: 1.5px solid rgb(100, 149, 237);
   line-height: 1.5;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.word-popup-content {
-  overflow-y: auto;
 }
 
 .popup-options {
@@ -490,7 +484,6 @@ html, body {
 
 .phrase-search-btn {
   position: absolute;
-  transform: translateX(-50%);
   background: rgb(100, 149, 237);
   color: #fff;
   border: none;
@@ -506,7 +499,7 @@ html, body {
 
 .phrase-search-btn:hover {
   background: rgb(80, 129, 217);
-  transform: translateX(-50%) translateY(-2px);
+  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0,0,0,0.15);
 }
 

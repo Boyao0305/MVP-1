@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo, useLayoutEffect } from 'react'
 
 // Checks if a word is a variant of any word in the review set.
 // Handles simple plural (-s) and verb (-ing) forms.
@@ -70,6 +70,28 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
   const readingCardRef = useRef(null);
   const wordCounter = useRef(0);
   const popupRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (popup.visible && popupRef.current) {
+      const popupEl = popupRef.current;
+      const screenWidth = window.innerWidth;
+      const margin = 10;
+      
+      const popupWidth = popupEl.offsetWidth;
+
+      // Calculate the ideal left position to center the popup
+      let left = popup.x - popupWidth / 2;
+
+      // Constrain the left position
+      if (left < margin) {
+        left = margin;
+      } else if (left + popupWidth > screenWidth - margin) {
+        left = screenWidth - margin - popupWidth;
+      }
+
+      popupEl.style.left = `${left}px`;
+    }
+  }, [popup]);
 
   const processTextForClicking = (htmlString, clickedWords, startNodeId, highlightedIds, explainedIds) => {
     if (typeof window === 'undefined' || !htmlString) return '';
@@ -317,6 +339,23 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
     // }
   }, [articleTitle])
 
+  // Effect to handle clicks outside the popup
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        setPopup(p => ({ ...p, visible: false }));
+      }
+    };
+
+    if (popup.visible) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [popup.visible]);
+
   useEffect(() => {
     if (showSelectionToast) {
       const timer = setTimeout(() => setShowSelectionToast(false), 4000);
@@ -521,34 +560,29 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
 
       {/* Popups for word definitions, options, and phrase results */}
       {popup.visible && popup.type !== 'phrase-search' && (
-        <div className="explanation-modal-overlay">
-          <div className="word-popup" ref={popupRef}>
-            <button
-              onClick={() => setPopup(p => ({...p, visible: false}))}
-              className="explanation-modal-close-btn"
-            >
-              &times;
-            </button>
-            <div className="word-popup-content">
-              {popup.type === 'options' && (
-                <div className="popup-options">
-                  <button onClick={handleRemoveMark} className="popup-option-btn">消除标记</button>
-                  <button onClick={handleSearchAgain} className="popup-option-btn">再查一遍</button>
-                </div>
-              )}
-              {popup.type === 'definition' && popup.content}
-              {popup.type === 'phrase-result' && (
-                <div>
-                  {popup.content}
-                  {!popup.isStreaming && popup.phrase && popup.phrase.split(/\s+/).length > 5 && (
-                    <button onClick={handlePhraseExplanation} className="popup-explain-btn">
-                      深度解析
-                    </button>
-                  )}
-                </div>
+        <div 
+          className="word-popup" 
+          ref={popupRef} 
+          style={{ top: `${popup.y + 10}px` }}
+          onMouseUp={e => e.stopPropagation()}
+        >
+          {popup.type === 'options' && (
+            <div className="popup-options">
+              <button onClick={handleRemoveMark} className="popup-option-btn">消除标记</button>
+              <button onClick={handleSearchAgain} className="popup-option-btn">再查一遍</button>
+            </div>
+          )}
+          {popup.type === 'definition' && popup.content}
+          {popup.type === 'phrase-result' && (
+            <div>
+              {popup.content}
+              {!popup.isStreaming && popup.phrase && popup.phrase.split(/\s+/).length > 5 && (
+                <button onClick={handlePhraseExplanation} className="popup-explain-btn">
+                  深度解析
+                </button>
               )}
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -561,7 +595,6 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
           style={{
             position: 'absolute',
             top: `${popup.y + 8}px`,
-            left: `${popup.x}px`,
           }}
           onMouseUp={e => e.stopPropagation()}
         >
