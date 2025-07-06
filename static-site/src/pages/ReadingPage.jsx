@@ -430,6 +430,8 @@ const ReadingPage = ({ log, onArticleCompleted, onFinishEarly, dailyGoal, articl
         className="reading-card" 
         onMouseDown={() => { isMouseDownRef.current = true; }}
         onMouseUp={handleInteraction}
+        onTouchStart={() => { isMouseDownRef.current = true; }}
+        onTouchEnd={handleInteraction}
       >
         <div className="reading-info-bar">
           tips: 请阅读文章并查询不认识的单词，我们会根据您的反馈提供个性化的学习体验
