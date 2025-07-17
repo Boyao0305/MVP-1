@@ -25,7 +25,17 @@ COPY en_core_web_sm-3.8.0-py3-none-any.whl .
 # Install build tools (for compiling Python wheels like blis)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
+    make \
     build-essential \
+    libblas-dev \
+    liblapack-dev \
+    libatlas-base-dev \
+    python3-dev \
+    espeak \
+    libespeak1 \
+    ffmpeg \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Use conda env's pip explicitly to avoid issues
