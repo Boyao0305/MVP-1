@@ -187,7 +187,7 @@ PROMPT_TMPL_ARTICLE = (
     "Outline = {outline}\n"
     "Vocabulary = {vocab}\n"
     "You are also required to make the article easy to read for the user with the level "
-    "of {CEFR}. Please only return the title and the article itself, marked the title and the demanded words like this: **example_word**"
+    "of {CEFR}. Please only return the article itself without marking any word in any form nor returning the title"
 )
 
 # ---------- endpoint -------------------------------------------------------
@@ -461,6 +461,104 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
             db.commit()
             output = definition2
 
+
+    return output
+
+@router.get("/english_word_search/{log_id}/{word}")
+
+def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
+    log = db.query(models.Learning_log).filter_by(id=log_id).first()
+    if log is None:
+        raise HTTPException(404, detail="Learning log not found")
+
+    # 2️⃣ insert the searched word
+    searched = models.Daily_searched_word(word=word, log_id=log_id)
+    db.add(searched)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        # With the composite PK (log_id, id) this fires if the *same* word is
+        # already linked to the log (or any other PK violation)
+        raise HTTPException(
+            400, detail="This word is already recorded for that log."
+        )
+    word0 = word.lower()
+    forms_to_try = [word]
+
+    # Try manual stem variants
+    if word0.endswith("ies"):
+        forms_to_try.append(word[:-3] + "y")  # studies → study
+    # if word0.endswith("ing"):
+    #     forms_to_try.append(word[:-3])        # eating → eat
+    # if word0.endswith("ed"):
+    #     forms_to_try.append(word[:-2])        # worked → work
+    if word0.endswith("s") and len(word) > 3:
+        forms_to_try.append(word[:-1])        # cars → car
+    # return forms_to_try   # Remove duplicates
+    forms_to_try = list(dict.fromkeys(forms_to_try))
+    #
+    # # Try each form
+
+    for form in forms_to_try:
+            # result = reverse_dict.get(form)
+            word1 = (
+                db.query(models.Word)
+
+                .filter(
+                    models.Word.word == form
+                )
+                .first()
+            )
+            if word1:
+                print("word1")
+                target_date = dt.date.today()
+                review_search = (
+                    db.query(models.Learning_log)
+                    .options(
+                        joinedload(models.Learning_log.daily_review_words),
+                    )
+                    .filter(
+                        models.Learning_log.id == log_id,)
+                    .first()
+
+                )
+
+                if word1 in review_search.daily_review_words:
+                    review_search2 = (
+                        db.query(models.Daily_review_word_link)
+                        .filter(
+                            models.Daily_review_word_link.learning_log_id == log_id,
+                            models.Daily_review_word_link.word_id == word1.id,
+                        )
+                        .first()
+                    )
+                    review_search2.review_indicator = 1
+                    db.commit()
+
+
+
+
+
+
+    client = OpenAI(
+        # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
+        api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
+        # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+    )
+
+    completion = client.chat.completions.create(
+        model="deepseek-v3",  # 此处以 deepseek-r1 为例，可按需更换模型名称。
+        messages=[
+            {'role': 'user',
+             'content': f"""请返回{word0}单词的英文解释和音标，请只返回一个或几个词性缩写和对应的英文解释以及单词音标(/的形式），并用逗号隔开"""
+             }
+        ]
+    )
+
+    definition2 = completion.choices[0].message.content
+    output = definition2
 
     return output
 
