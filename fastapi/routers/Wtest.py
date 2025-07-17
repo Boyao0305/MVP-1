@@ -13,9 +13,9 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/definition")
+@router.get("/definition/{word}")
 def definition_with_distractors(
-    word: str = Query(..., description="要查询的单词"),
+    word: str,
     db: Session = Depends(get_db)
 ):
     try:
