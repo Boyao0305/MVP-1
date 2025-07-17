@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import initiation1, routine, tts, Wtest
+
+from routers import initiation1, routine, advanced_options,tts, Wtest
+
 
 from website import api1,generation, dictionary
 from tools.English_specialist_api import composition_word
@@ -24,6 +26,8 @@ app.include_router(initiation1.router)
 
 app.include_router(test.router)
 app.include_router(routine.router)
+
+app.include_router(advanced_options.router)
 app.include_router(service_router.router)
 app.include_router(api1.router)
 app.include_router(generation.router)
