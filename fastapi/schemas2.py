@@ -71,8 +71,8 @@ class WordOut(BaseModel):
     definition: Optional[str] = None
     CEFR: Optional[str] = None
     phonetic: Optional[str] = None
-    tags: List[Tagbase] = Field(..., alias="l_tags")
-    status: List[Statusbase] = Field(..., alias="l_word_statuss")
+    # tags: List[Tagbase] = Field(..., alias="l_tags")
+    # status: List[Statusbase] = Field(..., alias="l_word_statuss")
 
     class Config:
         orm_mode = True
@@ -145,6 +145,7 @@ class LearningLogDetailOut(BaseModel):
     outline: Optional[str]
     daily_new_words: List[WordOut]
     daily_review_words: List[WordOut]
+    status: Optional[int]
 
     class Config:
         orm_mode = True

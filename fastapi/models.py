@@ -107,11 +107,12 @@ class Saved_phrase(Base):
     translation = Column(String(1000))
     explication = Column(String(1000))
     category = Column(String(30), index=True)
+    log_id = Column(Integer, nullable=True)
+    appreciation = Column(Integer, nullable=True)
+    note = Column(String(4096), nullable=True)
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     l_user = relationship("User", back_populates="l_saved_phrases")
-
-
 
 
 class Learning_log(Base):
@@ -128,6 +129,11 @@ class Learning_log(Base):
     outline = Column(String(4096), nullable=True)
     artical = Column(Text, nullable=True)
     appreciation = Column(Integer, nullable=True)
+    article_difficulty = Column(Integer, nullable=True)
+    words_difficulty = Column(Integer, nullable=True)
+    save = Column(Integer, nullable=True)
+    note = Column(String(4096), nullable=True)
+    status = Column(Integer, nullable=True, default=0)
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     l_user = relationship("User", back_populates="l_learning_logs")

@@ -737,6 +737,7 @@ def review_update(
     )
     if not log:
         raise HTTPException(404, "Learning-log not found")
+    log.status = 1
     user_id = log.user_id
 
     review_links = (
