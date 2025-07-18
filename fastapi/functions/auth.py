@@ -81,3 +81,29 @@ def register_user(
     db.refresh(setting)
 
     return user, setting
+
+
+def recover_password(
+    db: Session,
+    username: str,
+    password: str,
+
+):
+    # ------------------------------------------------
+    # 0️⃣  Make sure the username is unique
+    # ------------------------------------------------
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise ValueError("user name not valid")
+
+
+    # ------------------------------------------------
+    hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    user.hashed_password = hashed_pw
+
+    db.commit()
+    db.refresh(user)
+
+
+    return user

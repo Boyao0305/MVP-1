@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from functions.auth import authenticate_user, register_user
+from functions.auth import authenticate_user, register_user, recover_password
 from pydantic import BaseModel
 import schemas
 import datetime as dt
@@ -62,6 +62,18 @@ def register(data: schemas.FullRegisterRequest, db: Session = Depends(get_db)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@router.post("/password_recovery")
+def password_recover(data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    try:
+        user= recover_password(
+            db,
+            data.username,
+            data.password,
+        )
+        return {"message": "recovery successful", "username": user.username, "id": user.id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 @router.post(
     "/account_initiation/{user_id}/{word_book_id}/{daily_goal}",
     summary="Run the whole daily sequence for one user",
