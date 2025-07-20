@@ -111,10 +111,6 @@
 #
 #             else:
 #                 client = OpenAI(
-#                     # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-#                     api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-#                     # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-#                     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
 #                 )
 #
 #                 completion = client.chat.completions.create(

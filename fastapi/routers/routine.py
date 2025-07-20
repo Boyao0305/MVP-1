@@ -169,10 +169,14 @@ def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
 
     return {"logs": logs, "additional_information": info}
 
+from key.apikey_vault import APIKeyVault
+
+APIKeyVault = APIKeyVault()
+
 # ---------- DashScope-compatible client ------------------------------------
 async_client = AsyncOpenAI(
-    api_key=os.getenv("DASHSCOPE_API_KEY", "sk-5ccb1709bc5b4ecbbd3aedaf69ca969b"),
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+    base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
 )
 
 # ---------- prompt templates ----------------------------------------------
@@ -346,9 +350,8 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
         else:
             client = OpenAI(
                 # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-                api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-                # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+                api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+                base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
             )
 
             completion = client.chat.completions.create(
@@ -441,9 +444,8 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
 
             client = OpenAI(
                 # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-                api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-                # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+                api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+                base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
             )
 
             completion = client.chat.completions.create(
@@ -556,9 +558,8 @@ async def llm_stream(category: str,req: LLMRequest):
     # 1️⃣  initialise client (reuse a single instance in real apps)
     client = OpenAI(
         # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-        api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-        # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+        api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+        base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
     )
     prompt_word = f"请给出这个英文词组的中文翻译，请只返回答案本身；如果英文内容不是词组，请返回“内容不是词组”：{req.content}"
     prompt_phrase = f"请猜测语境并给出这个英文句子的中文翻译，请只返回答案本身：{req.content}"
@@ -594,9 +595,8 @@ async def llm_stream(user_id: int, req: LLMRequest2):
     # 1️⃣  initialise client (reuse a single instance in real apps)
     client = OpenAI(
         # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-        api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-        # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+        api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+        base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
     )
 
     prompt_explication = f"请用中文相对简短得解释这个英语句子（长难句）的意思（分模块解释，而非直接给出翻译），再列出中的重要语法点（固定搭配，表达，词组等，请最多挑出3-4点做简短的解释. ）{req.content}"
