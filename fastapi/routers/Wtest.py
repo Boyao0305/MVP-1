@@ -13,13 +13,13 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/definition/{word}")
+@router.get("/definition/{word_id}")
 def definition_with_distractors(
-    word: str,
+    word_id: int,
     db: Session = Depends(get_db)
 ):
     try:
-        return get_word_and_distractor_definitions(db, word)
+        return get_word_and_distractor_definitions(db, word_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

@@ -2,9 +2,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 import models
 
-def get_word_and_distractor_definitions(db: Session, word: str):
+def get_word_and_distractor_definitions(db: Session, word_id: int):
     # 查找目标单词的定义
-    word_entry = db.query(models.Word).filter(models.Word.word == word).first()
+    word_entry = db.query(models.Word).filter(models.Word.id == word_id).first()
     if not word_entry:
         raise ValueError("Target word not found in database")
 
@@ -14,7 +14,7 @@ def get_word_and_distractor_definitions(db: Session, word: str):
     # 随机选取3个其它单词的定义（不包含自己）
     distractors = (
         db.query(models.Word.definition)
-        .filter(models.Word.word != word)
+        .filter(models.Word.id !=word_id )
         .order_by(func.rand())  # PostgreSQL / SQLite；若是 MySQL 改为 func.rand()
         .limit(3)
         .all()
@@ -23,7 +23,7 @@ def get_word_and_distractor_definitions(db: Session, word: str):
     distractor_definitions = [d[0] for d in distractors]
 
     return {
-        "word": word,
+        "word": word_entry.word,
         "definition": target_definition,
         "distractors": distractor_definitions
     }

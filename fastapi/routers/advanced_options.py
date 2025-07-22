@@ -17,7 +17,7 @@ from functions.auth import authenticate_user, register_user
 from pydantic import BaseModel
 import schemas2
 
-from models import Learning_log, User
+from models import Learning_log, User, Daily_new_word_link, Daily_review_word_link
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, select
@@ -38,7 +38,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from models import Saved_phrase, User
-
+from models import Word, Learning_log
        # ← usual DB-session dependency
 def get_db():
     db = SessionLocal()
@@ -348,3 +348,32 @@ def update_difficulty(
     db.refresh(learning_log)
 
     return {"message": "Difficulties updated", "log_id": log_id}
+
+@router.get("/word_learning_history/{word_id}", response_model=List[dict])
+def get_learning_logs_by_word(word_id: int, db: Session = Depends(get_db)):
+    # Fetch the word from the database to ensure it exists
+    word = db.query(Word).filter(Word.id == word_id).first()
+    if not word:
+        raise HTTPException(status_code=404, detail="Word not found")
+
+    # Query for the learning logs where the word is part of daily new or reviewed words
+    learning_logs = db.query(Learning_log).join(
+        Daily_new_word_link, Learning_log.id == Daily_new_word_link.learning_log_id
+    ).filter(Daily_new_word_link.word_id == word_id, Learning_log.artical.isnot(None)).all()
+
+    # Adding the learning logs from the daily review word link table
+    learning_logs += db.query(Learning_log).join(
+        Daily_review_word_link, Learning_log.id == Daily_review_word_link.learning_log_id
+    ).filter(Daily_review_word_link.word_id == word_id, Learning_log.artical.isnot(None)).all()
+
+    # Prepare the result with only the needed fields
+    result = [
+        {
+            "date": log.date,
+            "english_title": log.english_title,
+            "chinese_title": log.chinese_title
+        }
+        for log in learning_logs
+    ]
+
+    return result
