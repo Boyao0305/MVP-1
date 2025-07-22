@@ -349,8 +349,8 @@ def update_difficulty(
 
     return {"message": "Difficulties updated", "log_id": log_id}
 
-@router.get("/word_learning_history/{word_id}", response_model=List[dict])
-def get_learning_logs_by_word(word_id: int, db: Session = Depends(get_db)):
+@router.get("/word_learning_history/{user_id}/{word_id}", response_model=List[dict])
+def get_learning_logs_by_word(word_id: int, user_id: int, db: Session = Depends(get_db)):
     # Fetch the word from the database to ensure it exists
     word = db.query(Word).filter(Word.id == word_id).first()
     if not word:
@@ -359,12 +359,16 @@ def get_learning_logs_by_word(word_id: int, db: Session = Depends(get_db)):
     # Query for the learning logs where the word is part of daily new or reviewed words
     learning_logs = db.query(Learning_log).join(
         Daily_new_word_link, Learning_log.id == Daily_new_word_link.learning_log_id
-    ).filter(Daily_new_word_link.word_id == word_id, Learning_log.artical.isnot(None)).all()
+    ).filter(Daily_new_word_link.word_id == word_id,
+             Learning_log.artical.isnot(None),
+             Learning_log.user_id == user_id).all()
 
     # Adding the learning logs from the daily review word link table
     learning_logs += db.query(Learning_log).join(
         Daily_review_word_link, Learning_log.id == Daily_review_word_link.learning_log_id
-    ).filter(Daily_review_word_link.word_id == word_id, Learning_log.artical.isnot(None)).all()
+    ).filter(Daily_review_word_link.word_id == word_id,
+             Learning_log.artical.isnot(None),
+             Learning_log.user_id == user_id).all()
 
     # Prepare the result with only the needed fields
     result = [
