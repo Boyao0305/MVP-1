@@ -23,6 +23,7 @@ RUN chmod -R +x node_modules/.bin
 
 ##################  Stage 2 — runtime  ##########################
 FROM nginx:1.25-alpine
+RUN rm -rf /usr/share/nginx/html/*
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
