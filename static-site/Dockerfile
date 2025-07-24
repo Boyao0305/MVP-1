@@ -19,7 +19,7 @@ COPY . .
 
 # 4  Build — call Vite *via npx* so it works even if $PATH is odd
 RUN chmod -R +x node_modules/.bin
-RUN npx vite build                      # outputs to /app/dist
+#RUN npx vite build                      # outputs to /app/dist
 
 ##################  Stage 2 — runtime  ##########################
 FROM nginx:1.25-alpine
