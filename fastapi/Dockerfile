@@ -24,7 +24,10 @@ RUN echo "source activate fastapi-env" >> ~/.bashrc
 COPY en_core_web_sm-3.8.0-py3-none-any.whl .
 
 # Install build tools (for compiling Python wheels like blis)
-RUN sed -i 's|http://deb.debian.org|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && \
+RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list && \
+    echo "deb http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list && \
+    echo "deb http://deb.debian.org/debian bookworm-updates main" >> /etc/apt/sources.list && \
+    sed -i 's|http://deb.debian.org|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         gcc \
@@ -37,9 +40,10 @@ RUN sed -i 's|http://deb.debian.org|https://mirrors.tuna.tsinghua.edu.cn|g' /etc
         python3-dev \
         espeak \
         libespeak1 \
-        ffmpeg \
-    && apt-get clean && \
+        ffmpeg && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
 
 # Use conda env's pip explicitly to avoid issues
 RUN /opt/conda/envs/fastapi-env/bin/pip install spacy \
