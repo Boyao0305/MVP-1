@@ -12,7 +12,7 @@ RUN conda env create -f environment.yml
 
 # 2️⃣ Activate environment and install pip-only packages
 # Use full path to conda's Python for reliability in Docker
-RUN /opt/conda/envs/fastapi-env/bin/pip install cefrpy
+RUN /opt/conda/envs/fastapi-env/bin/pip install -i https://pypi.tuna.tsinghua.edu.cn/simple cefrpy
 
 
 # 3️⃣ Update PATH and set up environment activation
