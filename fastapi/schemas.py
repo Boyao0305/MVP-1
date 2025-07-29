@@ -56,7 +56,9 @@ class UserResponse(BaseModel):
     chosed_word_book_id: Optional[int]
     average_caiji: float
     daily_goal: int
-
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 
     class Config:
         orm_mode = True

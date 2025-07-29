@@ -4,6 +4,72 @@ import bcrypt
 import schemas
 from typing import List, Optional
 
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
+from jose import jwt, JWTError
+from datetime import datetime, timedelta
+from typing import Optional
+import secrets
+
+app = FastAPI()
+
+# =======================
+# CONFIG
+# =======================
+SECRET_KEY = "super-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 1
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# In-memory stores (for demo only)
+fake_users_db = {"alice": {"username": "alice", "password": "secret", "role": "user", "user_id": 1}}
+refresh_token_store = {}  # key: refresh_token, value: user_id
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+# =======================
+# SCHEMASd
+# =======================
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+class TokenData(BaseModel):
+    user_id: int
+    role: str
+
+# =======================
+# UTILS
+# =======================
+def create_token(data: dict, expires_delta: timedelta):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def create_access_token(user_id: int, role: str):
+    return create_token({"user_id": user_id, "role": role}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+
+def create_refresh_token(user_id: int):
+    token = secrets.token_urlsafe(32)
+    refresh_token_store[token] = {"user_id": user_id, "exp": datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)}
+    return token
+
+def verify_token(token: str) -> TokenData:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return TokenData(user_id=payload["user_id"], role=payload["role"])
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# =======================
+# DEPENDENCY
+# =======================
+def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
+    return verify_token(token)
+
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:

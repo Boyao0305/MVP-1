@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException, Form,Body
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from functions.auth import authenticate_user, register_user, recover_password
+from functions.auth import authenticate_user, register_user, recover_password, create_access_token, create_refresh_token
 from pydantic import BaseModel
 import schemas
 import datetime as dt
@@ -9,6 +9,7 @@ import models
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import models, schemas
+from functions.auth import refresh_token_store
 from functions.new_session import (
     assign_word_book,
     set_daily_goal,
@@ -17,7 +18,7 @@ from functions.new_session import (
     assign_daily_review_words,
     generate_outlines_for_date_async,
 )
-
+from datetime import datetime, timedelta
 router = APIRouter(prefix="/api")
 
 def get_db():
@@ -27,14 +28,33 @@ def get_db():
     finally:
         db.close()
 
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 
 
-@router.post("/login")
+
+
+# @router.post("/login", response_model=Token)
+# def login(form_data: OAuth2PasswordRequestForm = Depends()):
+#     user = fake_users_db.get(form_data.username)
+#     if not user or user["password"] != form_data.password:
+#         raise HTTPException(status_code=400, detail="Incorrect username or password")
+#
+#     access_token = create_access_token(user_id=user["user_id"], role=user["role"])
+#     refresh_token = create_refresh_token(user["user_id"])
+#     return Token(access_token=access_token, refresh_token=refresh_token)
+
+@router.post("/login", response_model=Token)
 def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = authenticate_user(db, data.username, data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    return {"message": "Login successful", "username": user.username, "id": user.id}
+    access_token = create_access_token(user_id=user.id, role="user")
+    refresh_token = create_refresh_token(user_id=user.id)
+    return Token(access_token=access_token, refresh_token=refresh_token)
+
 
 @router.post("/register", response_model=schemas.UserResponse)
 def register(data: schemas.FullRegisterRequest, db: Session = Depends(get_db)):
@@ -49,6 +69,8 @@ def register(data: schemas.FullRegisterRequest, db: Session = Depends(get_db)):
             data.daily_goal,
             data.invitation_code
         )
+        access_token = create_access_token(user_id=user["user_id"], role=user["role"])
+        refresh_token = create_refresh_token(user["user_id"])
         return schemas.UserResponse(
             id=user.id,
             username=user.username,
@@ -57,12 +79,31 @@ def register(data: schemas.FullRegisterRequest, db: Session = Depends(get_db)):
             consecutive_learning=user.consecutive_learning,
             chosed_word_book_id=setting.chosed_word_book_id,
             average_caiji=setting.average_caiji,
-            daily_goal=setting.daily_goal
+            daily_goal=setting.daily_goal,
+            access_token=access_token,
+            refresh_token=refresh_token,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
+@router.post("/refresh", response_model=Token)
+def refresh_token(req: RefreshRequest):
+    tokenstring=req.refresh_token
+    token_data = refresh_token_store.get(tokenstring)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    if token_data["exp"] < datetime.utcnow():
+        del refresh_token_store[tokenstring]
+        raise HTTPException(status_code=401, detail="Refresh token expired")
+
+    new_access = create_access_token(user_id=token_data["user_id"], role="user")
+    new_refresh = create_refresh_token(token_data["user_id"])
+    del refresh_token_store[tokenstring]
+    return Token(access_token=new_access, refresh_token=new_refresh)
 @router.post("/password_recovery")
 def password_recover(data: schemas.LoginRequest, db: Session = Depends(get_db)):
     try:
