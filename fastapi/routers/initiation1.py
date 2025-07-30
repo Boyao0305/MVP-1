@@ -46,7 +46,7 @@ class Token(BaseModel):
 #     refresh_token = create_refresh_token(user["user_id"])
 #     return Token(access_token=access_token, refresh_token=refresh_token)
 
-@router.post("/login", response_model=Token)
+@router.post("/logintest", response_model=Token)
 def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = authenticate_user(db, data.username, data.password)
     if not user:
@@ -54,7 +54,12 @@ def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(user_id=user.id, role="user")
     refresh_token = create_refresh_token(user_id=user.id)
     return Token(access_token=access_token, refresh_token=refresh_token)
-
+@router.post("/login")
+def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    user = authenticate_user(db, data.username, data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    return {"message": "Login successful", "username": user.username, "id": user.id}
 
 @router.post("/register", response_model=schemas.UserResponse)
 def register(data: schemas.FullRegisterRequest, db: Session = Depends(get_db)):
