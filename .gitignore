@@ -4,3 +4,4 @@ docker-compose.yml
 nginx/nginx.conf
 /nginx
 *.yml
+docker-compose.yml
