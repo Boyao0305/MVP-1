@@ -18,6 +18,7 @@ from functions.new_session import (
     assign_daily_review_words,
     generate_outlines_for_date_async,
 )
+from tools.logger import logger
 from datetime import datetime, timedelta
 router = APIRouter(prefix="/api")
 
@@ -47,22 +48,30 @@ class Token(BaseModel):
 #     return Token(access_token=access_token, refresh_token=refresh_token)
 
 @router.post("/logintest", response_model=Token)
-def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
+def login_test(data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    logger.info(f"收到 logintest 登录请求，username={data.username}")
     user = authenticate_user(db, data.username, data.password)
     if not user:
+        logger.warning(f"logintest 登录失败，username={data.username}")
         raise HTTPException(status_code=401, detail="Invalid username or password")
     access_token = create_access_token(user_id=user.id, role="user")
     refresh_token = create_refresh_token(user_id=user.id)
+    logger.success(f"logintest 登录成功，user_id={user.id}, username={user.username}")
     return Token(access_token=access_token, refresh_token=refresh_token)
+
 @router.post("/login")
 def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    logger.info(f"收到 login 登录请求，username={data.username}")
     user = authenticate_user(db, data.username, data.password)
     if not user:
+        logger.warning(f"login 登录失败，username={data.username}")
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    logger.success(f"login 登录成功，user_id={user.id}, username={user.username}")
     return {"message": "Login successful", "username": user.username, "id": user.id}
 
 @router.post("/register", response_model=schemas.UserResponse)
 def register(data: schemas.FullRegisterRequest, db: Session = Depends(get_db)):
+    logger.info(f"收到注册请求，username={data.username}, word_book_id={data.chosed_word_book_id}")
     try:
         user, setting = register_user(
             db,
@@ -74,8 +83,12 @@ def register(data: schemas.FullRegisterRequest, db: Session = Depends(get_db)):
             data.daily_goal,
             data.invitation_code
         )
+        logger.success(f"注册成功，user_id={user.id}, username={user.username}")
+
         access_token = create_access_token(user_id=user["user_id"], role=user["role"])
         refresh_token = create_refresh_token(user["user_id"])
+        logger.debug(f"Token 生成成功，user_id={user.id}")
+
         return schemas.UserResponse(
             id=user.id,
             username=user.username,
@@ -89,37 +102,57 @@ def register(data: schemas.FullRegisterRequest, db: Session = Depends(get_db)):
             refresh_token=refresh_token,
         )
     except ValueError as e:
+        logger.warning(f"注册失败，username={data.username}，原因：{str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"注册服务异常，username={data.username}，原因：{e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 class RefreshRequest(BaseModel):
     refresh_token: str
 
 @router.post("/refresh", response_model=Token)
 def refresh_token(req: RefreshRequest):
-    tokenstring=req.refresh_token
+    logger.info(f"收到 refresh token 请求")
+    tokenstring = req.refresh_token
     token_data = refresh_token_store.get(tokenstring)
+    
     if not token_data:
+        logger.warning(f"无效的 refresh token: {tokenstring}")
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     if token_data["exp"] < datetime.utcnow():
+        logger.warning(f"refresh token 已过期: {tokenstring}")
         del refresh_token_store[tokenstring]
         raise HTTPException(status_code=401, detail="Refresh token expired")
 
-    new_access = create_access_token(user_id=token_data["user_id"], role="user")
-    new_refresh = create_refresh_token(token_data["user_id"])
-    del refresh_token_store[tokenstring]
-    return Token(access_token=new_access, refresh_token=new_refresh)
+    try:
+        new_access = create_access_token(user_id=token_data["user_id"], role="user")
+        new_refresh = create_refresh_token(token_data["user_id"])
+        del refresh_token_store[tokenstring]
+        logger.success(f"user_id={token_data['user_id']} refresh token 刷新成功")
+        return Token(access_token=new_access, refresh_token=new_refresh)
+    except Exception as e:
+        logger.exception(f"refresh token 刷新失败: {e}")
+        raise HTTPException(status_code=500, detail="Token refresh failed")
+
 @router.post("/password_recovery")
 def password_recover(data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    logger.info(f"收到密码找回请求，username={data.username}")
     try:
-        user= recover_password(
+        user = recover_password(
             db,
             data.username,
             data.password,
         )
+        logger.success(f"密码找回成功，user_id={user.id}, username={user.username}")
         return {"message": "recovery successful", "username": user.username, "id": user.id}
     except ValueError as e:
+        logger.warning(f"密码找回失败，username={data.username}，原因：{str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"密码找回服务异常，username={data.username}，原因：{e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 @router.post(
     "/account_initiation/{user_id}/{word_book_id}/{daily_goal}",
     summary="Run the whole daily sequence for one user",
@@ -139,47 +172,70 @@ async def run_daily_pipeline(
     6️⃣  Ask the LLM for outlines + titles and persist them
     7️⃣  Return a compact JSON summary for the caller
     """
+    logger.info(
+        f"收到 account_initiation 初始化请求 user_id={user_id}, word_book_id={word_book_id}, daily_goal={daily_goal}"
+    )
     today = dt.date.today()
+    try:
+        # --- 1. word-book & 2. goal ---------------------------------
+        assign_word_book(user_id, word_book_id, db)
+        logger.info(f"user_id={user_id} 已分配词书 word_book_id={word_book_id}")
+        set_daily_goal(user_id, daily_goal, db)
+        logger.info(f"user_id={user_id} 今日目标设为 {daily_goal}")
 
-    # --- 1.  word-book & 2. goal ---------------------------------
-    assign_word_book(user_id, word_book_id, db)
-    set_daily_goal(user_id, daily_goal, db)
+        # --- 3. five logs --------------------------------------------
+        logs = create_five_learning_logs(user_id, today, db)
+        log_ids = [log.id for log in logs]
+        logger.info(f"user_id={user_id} 今日已创建 5 条学习日志: {log_ids}")
 
-    # --- 3. five logs --------------------------------------------
-    logs = create_five_learning_logs(user_id, today, db)
-    log_ids = [log.id for log in logs]
+        # --- 4. daily-new words --------------------------------------
+        new_words = assign_daily_new_words(user_id, today, db)
+        logger.info(f"user_id={user_id} 今日新单词分配结果: {new_words}")
 
-    # --- 4. daily-new words --------------------------------------
-    new_words = assign_daily_new_words(user_id, today, db)        # {log_id: [word_id,…]}
+        # --- 5. daily-review words -----------------------------------
+        review_raw = assign_daily_review_words(user_id, today, db)
+        review_words = {
+            lid: [ws.l_words.id for ws in ws_list] for lid, ws_list in review_raw.items()
+        }
+        logger.info(f"user_id={user_id} 今日复习单词分配: {review_words}")
 
-    # --- 5. daily-review words -----------------------------------
-    review_raw = assign_daily_review_words(user_id, today, db)    # {log_id: [Word_status,…]}
-    review_words = {
-        lid: [ws.l_words.id for ws in ws_list] for lid, ws_list in review_raw.items()
-    }
+        # --- 6. outlines (async, ~5 parallel LLM calls) --------------
+        outlines = await generate_outlines_for_date_async(user_id, today, db)
+        logger.info(f"user_id={user_id} 今日大纲生成完毕 outlines_count={len(outlines)}")
 
-    # --- 6. outlines (async, ~5 parallel LLM calls) --------------
-    outlines = await generate_outlines_for_date_async(user_id, today, db)
-    # outlines → [{"log": <Learning_log>, "prompt": "...", "answer": {...}}, …]
+        # --- 7. summary payload --------------------------------------
+        result = {
+            "date": today.isoformat(),
+            "log_ids": log_ids,
+            "daily_new_word_ids": new_words,
+            "daily_review_word_ids": review_words,
+            "outlines_saved": [
+                {
+                    "log_id": item["log"].id,
+                    "english_title": item["answer"].get("english_title", ""),
+                    "chinese_title": item["answer"].get("chinese_title", ""),
+                }
+                for item in outlines
+            ],
+        }
+        logger.success(f"user_id={user_id} account_initiation 全流程成功: {result}")
+        return result
 
-    # --- 7. summary payload --------------------------------------
-    return {
-        "date": today.isoformat(),
-        "log_ids": log_ids,
-        "daily_new_word_ids": new_words,
-        "daily_review_word_ids": review_words,
-        "outlines_saved": [
-            {"log_id": item["log"].id,
-             "english_title": item["answer"].get("english_title", ""),
-             "chinese_title": item["answer"].get("chinese_title", "")}
-            for item in outlines
-        ],
-    }
+    except Exception as e:
+        logger.exception(f"user_id={user_id} account_initiation 初始化流程异常: {e}")
+        raise HTTPException(status_code=500, detail="Account initiation pipeline failed")
 
 DATABASE_VERSION = "v1.0.0"
 @router.get("/version")
 def get_version():
-    return {"version": DATABASE_VERSION}
+    logger.info("收到 version 查询请求")
+    try:
+        version = DATABASE_VERSION
+        logger.success(f"查询 version 成功，version={version}")
+        return {"version": version}
+    except Exception as e:
+        logger.exception(f"查询 version 异常: {e}")
+        return {"error": "Could not get version"}
 # @router.post("/assign_word_book/{user_id}/{word_book_id}", respons    e_model=schemas.Learning_settings)
 # def assign_word_book(user_id: int, word_book_id: int, db: Session = Depends(get_db)):
 #     setting = db.query(models.Learning_setting).filter(models.Learning_setting.user_id == user_id).first()
@@ -250,10 +306,17 @@ def get_version():
 #
 @router.post("/set_daily_goal/{user_id}/{goal}", response_model=schemas.Learning_settings)
 def set_daily_goal(user_id: int, goal: int, db: Session = Depends(get_db)):
-    setting = db.query(models.Learning_setting).filter(models.Learning_setting.user_id == user_id).first()
-    if not setting:
-        raise HTTPException(status_code=404, detail="Learning setting not found for this user")
-    setting.daily_goal = goal
-    db.commit()
-    db.refresh(setting)
-    return setting
+    logger.info(f"收到 set_daily_goal 请求, user_id={user_id}, goal={goal}")
+    try:
+        setting = db.query(models.Learning_setting).filter(models.Learning_setting.user_id == user_id).first()
+        if not setting:
+            logger.warning(f"未找到用户的学习设置, user_id={user_id}")
+            raise HTTPException(status_code=404, detail="Learning setting not found for this user")
+        setting.daily_goal = goal
+        db.commit()
+        db.refresh(setting)
+        logger.success(f"user_id={user_id} 日目标设置为 {goal} 成功")
+        return setting
+    except Exception as e:
+        logger.exception(f"user_id={user_id} 日目标设置失败: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
