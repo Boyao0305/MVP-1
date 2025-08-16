@@ -18,3 +18,4 @@ spacy
 cefrpy
 python-jose
 loguru
+aiomysql

@@ -1,4 +1,7 @@
 # routers/learning_log_outline.py
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select, case, func
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
@@ -31,15 +34,20 @@ from functions.new_session import (                    # ← orchestration helpe
 from functions.cefr import compare_lists_to_text
 from functions.cefr2 import update_average_caiji_for_user
 import json, os, asyncio
+
 from tools.logger import logger 
 
        # ← usual DB-session dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
+
+async def get_db():
+    async with SessionLocal() as session:
+        yield session
 
 router = APIRouter(prefix="/api")
 
@@ -165,43 +173,31 @@ def read_learning_logs(current_user: TokenData = Depends(get_current_user), db: 
     )
     logger.success(f"user {user_id} 查询返回成功")
     return {"logs": logs, "additional_information": info}
-
-@router.get(
-    "/daily_learning_logs/{user_id}",
-    response_model=DailyLogsWithInfoOut,
-    summary="Return today's learning-logs plus user-level info",
-)
-def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
-    logger.info(f"用户请求 daily_learning_logs, user_id={user_id}")
-
-    logs = (
-        db.query(models.Learning_log)
+@router.get("/daily_learning_logs/{user_id}", response_model=DailyLogsWithInfoOut)
+async def read_learning_logs(user_id: int, db: AsyncSession = Depends(get_db)):
+    # logs
+    q_logs = (
+        select(models.Learning_log)
         .options(
-            joinedload(models.Learning_log.daily_new_words),
-            joinedload(models.Learning_log.daily_review_words),
+            selectinload(models.Learning_log.daily_new_words),
+            selectinload(models.Learning_log.daily_review_words),
         )
-        .filter(
-            models.Learning_log.user_id == user_id)
+        .where(models.Learning_log.user_id == user_id)
         .order_by(models.Learning_log.id.desc())
         .limit(5)
-        .all()
     )
-    logger.debug(f"user_id={user_id} 查到的 logs 数量: {len(logs)}")
-
+    logs = (await db.execute(q_logs)).scalars().all()
     if not logs:
-        logger.warning(f"user_id={user_id} 未查到 logs")
-        raise HTTPException(404, "No logs found for that user/date")
+        raise HTTPException(status_code=404, detail="No logs found for that user.")
 
-    setting = (
-        db.query(models.Learning_setting)
-          .filter(models.Learning_setting.user_id == user_id)
-          .first()
-    )
-    if setting is None:
-        logger.info(f"user_id={user_id} 未设置学习设置")
+    # settings
+    q_set = select(models.Learning_setting).where(models.Learning_setting.user_id == user_id)
+    setting = (await db.execute(q_set)).scalars().first()
+
+    if setting is None or setting.chosed_word_book_id is None:
         info = AdditionalInformation(
             word_book_id=None,
-            daily_goal=0,
+            daily_goal=setting.daily_goal if setting else 0,
             learning_proportion=0.0,
             learned_proportion=0.0,
             progression=0,
@@ -211,64 +207,155 @@ def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
 
     word_book_id = setting.chosed_word_book_id
     daily_goal = setting.daily_goal
-    logger.debug(f"user_id={user_id} 的 word_book_id={word_book_id}, daily_goal={daily_goal}")
 
     word_ids_subq = (
         select(models.Word_wordbook_link.word_id)
         .where(models.Word_wordbook_link.word_book_id == word_book_id)
         .subquery()
     )
-    progression1 = 0
-    total_words = db.scalar(select(func.count()).select_from(word_ids_subq)) or 0
-    logger.debug(f"user_id={user_id} 的 word_book_id={word_book_id}，单词总数: {total_words}")
+
+    total_words = (
+        await db.scalar(select(func.count()).select_from(word_ids_subq))
+    ) or 0
 
     if total_words == 0:
         learning_prop = learned_prop = 0.0
-        logger.info(f"user_id={user_id} word_book_id={word_book_id} 没有单词")
+        progression1 = 0
     else:
-        learning_count = db.scalar(
-            select(func.count())
-            .select_from(models.Word_status)
-            .where(
+        result = await db.execute(
+            select(
+                func.sum(case((models.Word_status.status == "learning", 1), else_=0)),
+                func.sum(case((models.Word_status.status == "learned", 1), else_=0)),
+            ).where(
                 models.Word_status.users_id == user_id,
-                models.Word_status.words_id.in_(word_ids_subq),
-                models.Word_status.status == "learning",
+                models.Word_status.words_id.in_(select(word_ids_subq.c.word_id)),
             )
-        ) or 0
+        )
+        learning_count, learned_count = result.one()
 
-        learned_count = db.scalar(
-            select(func.count())
-            .select_from(models.Word_status)
-            .where(
-                models.Word_status.users_id == user_id,
-                models.Word_status.words_id.in_(word_ids_subq),
-                models.Word_status.status == "learned",
-            )
-        ) or 0
+        learning_count = learning_count or 0
+        learned_count = learned_count or 0
+
         progression1 = learning_count + learned_count
         learning_prop = learning_count / total_words
-        learned_prop  = learned_count  / total_words
-        logger.debug(f"user_id={user_id} 学习中: {learning_count}, 已学会: {learned_count}")
+        learned_prop = learned_count / total_words
 
     info = AdditionalInformation(
         word_book_id=word_book_id,
-        daily_goal=daily_goal,
-        learning_proportion=learning_prop,
-        learned_proportion=learned_prop,
+        daily_goal=daily_goal or 0,
+        learning_proportion=round(learning_prop, 4),
+        learned_proportion=round(learned_prop, 4),
         progression=progression1,
         total=total_words,
     )
-    logger.success(f"user_id={user_id} 查询返回成功")
     return {"logs": logs, "additional_information": info}
+# @router.get(
+#     "/daily_learning_logs/{user_id}",
+#     response_model=DailyLogsWithInfoOut,
+#     summary="Return today's learning-logs plus user-level info",
+# )
+# def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
+#     logger.info(f"用户请求 daily_learning_logs, user_id={user_id}")
+#
+#     logs = (
+#         db.query(models.Learning_log)
+#         .options(
+#             joinedload(models.Learning_log.daily_new_words),
+#             joinedload(models.Learning_log.daily_review_words),
+#         )
+#         .filter(
+#             models.Learning_log.user_id == user_id)
+#         .order_by(models.Learning_log.id.desc())
+#         .limit(5)
+#         .all()
+#     )
+#     logger.debug(f"user_id={user_id} 查到的 logs 数量: {len(logs)}")
+#
+#     if not logs:
+#         logger.warning(f"user_id={user_id} 未查到 logs")
+#         raise HTTPException(404, "No logs found for that user/date")
+#
+#     setting = (
+#         db.query(models.Learning_setting)
+#           .filter(models.Learning_setting.user_id == user_id)
+#           .first()
+#     )
+#     if setting is None:
+#         logger.info(f"user_id={user_id} 未设置学习设置")
+#         info = AdditionalInformation(
+#             word_book_id=None,
+#             daily_goal=0,
+#             learning_proportion=0.0,
+#             learned_proportion=0.0,
+#             progression=0,
+#             total=0,
+#         )
+#         return {"logs": logs, "additional_information": info}
+#
+#     word_book_id = setting.chosed_word_book_id
+#     daily_goal = setting.daily_goal
+#     logger.debug(f"user_id={user_id} 的 word_book_id={word_book_id}, daily_goal={daily_goal}")
+#
+#     word_ids_subq = (
+#         select(models.Word_wordbook_link.word_id)
+#         .where(models.Word_wordbook_link.word_book_id == word_book_id)
+#         .subquery()
+#     )
+#     progression1 = 0
+#     total_words = db.scalar(select(func.count()).select_from(word_ids_subq)) or 0
+#     logger.debug(f"user_id={user_id} 的 word_book_id={word_book_id}，单词总数: {total_words}")
+#
+#     if total_words == 0:
+#         learning_prop = learned_prop = 0.0
+#         logger.info(f"user_id={user_id} word_book_id={word_book_id} 没有单词")
+#     else:
+#         learning_count = db.scalar(
+#             select(func.count())
+#             .select_from(models.Word_status)
+#             .where(
+#                 models.Word_status.users_id == user_id,
+#                 models.Word_status.words_id.in_(word_ids_subq),
+#                 models.Word_status.status == "learning",
+#             )
+#         ) or 0
+#
+#         learned_count = db.scalar(
+#             select(func.count())
+#             .select_from(models.Word_status)
+#             .where(
+#                 models.Word_status.users_id == user_id,
+#                 models.Word_status.words_id.in_(word_ids_subq),
+#                 models.Word_status.status == "learned",
+#             )
+#         ) or 0
+#         progression1 = learning_count + learned_count
+#         learning_prop = learning_count / total_words
+#         learned_prop  = learned_count  / total_words
+#         logger.debug(f"user_id={user_id} 学习中: {learning_count}, 已学会: {learned_count}")
+#
+#     info = AdditionalInformation(
+#         word_book_id=word_book_id,
+#         daily_goal=daily_goal,
+#         learning_proportion=learning_prop,
+#         learned_proportion=learned_prop,
+#         progression=progression1,
+#         total=total_words,
+#     )
+#     logger.success(f"user_id={user_id} 查询返回成功")
+#     return {"logs": logs, "additional_information": info}
 
 from key.apikey_vault import APIKeyVault
 
 APIKeyVault = APIKeyVault()
 
 # ---------- DashScope-compatible client ------------------------------------
+# async_client = AsyncOpenAI(
+#     api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+#     base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
+# )
 async_client = AsyncOpenAI(
-    api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
-    base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
+    api_key = "sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
 )
 
 # ---------- prompt templates ----------------------------------------------

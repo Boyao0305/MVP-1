@@ -25,3 +25,4 @@ dependencies:
   - pip
   - pip:
       - python-jose
+      - aiomysql>=0.2
