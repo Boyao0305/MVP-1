@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import initiation1, routine, advanced_options,tts, Wtest
+from routers import initiation1, routine, advanced_options,tts, Wtest, phone_number
+from routers2 import initiation2, routine2, advanced_options2,tts2, Wtest2, phone_number2
 
 
 from website import api1,generation, dictionary
@@ -21,20 +22,30 @@ app.add_middleware(
 )
 
 
-app.include_router(initiation1.router)
-
-
-app.include_router(test.router)
-app.include_router(routine.router)
 
 app.include_router(advanced_options.router)
-app.include_router(service_router.router)
-app.include_router(api1.router)
-app.include_router(generation.router)
-# app.include_router(dictionary.router)
-app.include_router(composition_word.router)
+app.include_router(initiation1.router)
+app.include_router(phone_number.router)
+app.include_router(routine.router)
 app.include_router(tts.router)
 app.include_router(Wtest.router)
+
+app.include_router(advanced_options2.router)
+app.include_router(initiation2.router)
+app.include_router(phone_number2.router)
+app.include_router(routine2.router)
+app.include_router(tts2.router)
+app.include_router(Wtest2.router)
+
+# app.include_router(test.router)
+#
+# app.include_router(service_router.router)
+# app.include_router(api1.router)
+# app.include_router(generation.router)
+# # app.include_router(dictionary.router)
+# app.include_router(composition_word.router)
+
+
 
 # @app.get("/")
 # async def root(request: Request):

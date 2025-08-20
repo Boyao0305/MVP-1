@@ -33,18 +33,23 @@ class Userget(BaseModel):
         orm_mode = True
 
 class LoginRequest(Userbase):
-    pass
-
+    phone_number: str
+    code: str
+class ChangePhoneNumber(BaseModel):
+    user_id: int
+    phone_number: str
+    code: str
 # schemas.py
 
 class FullRegisterRequest(BaseModel):
     username: str
     password: str
-    # phone_number: str
+    phone_number: str
+    code: str
     chosed_word_book_id: Optional[int] = None
     average_caiji: Optional[float] = 1
     daily_goal: Optional[int] = 15
-    invitation_code: str
+
 
 
 class UserResponse(BaseModel):

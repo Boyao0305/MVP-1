@@ -2,30 +2,26 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import SessionLocal
-<<<<<<< Updated upstream
-from functions.word_test import get_word_and_distractor_definitions  # ✅ 导入函数
-=======
 from functions.word_test import get_word_and_distractor_definitions
 from tools.logger import logger
 import inspect
->>>>>>> Stashed changes
-
-router = APIRouter(prefix="/api")
+from functions.auth import authenticate_user, register_user, get_current_user
+from pydantic import BaseModel
+router = APIRouter(prefix="/test")
 
 # Async DB dependency
 async def get_db():
     async with SessionLocal() as db:
         yield db
-
+class TokenData(BaseModel):
+    user_id: int
+    role: str
 @router.get("/definition/{word_id}")
 async def definition_with_distractors(
     word_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db), current_user: TokenData = Depends(get_current_user)
 ):
     try:
-<<<<<<< Updated upstream
-        return get_word_and_distractor_definitions(db, word_id)
-=======
         logger.info(f"收到 definition 查询请求，word_id={word_id}")
 
         # Support both sync and async implementations of the helper
@@ -39,8 +35,9 @@ async def definition_with_distractors(
 
         logger.debug(f"查询结果: {result}")
         return result
->>>>>>> Stashed changes
     except ValueError as e:
+        logger.warning(f"未找到 word_id={word_id}，原因: {e}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        logger.exception(f"服务内部异常，word_id={word_id}")
         raise HTTPException(status_code=500, detail=f"服务内部异常: {str(e)}")

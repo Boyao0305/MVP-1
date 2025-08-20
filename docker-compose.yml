@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    networks:
+      mynetwork:
+        ipv4_address: 172.28.0.6
+    ports:
+      - "6379:6379"                # optional, only needed if you want host access
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   mysql:
     build:
       context: ./mysql  # 从 ./mysql 目录构建 MySQL 镜像

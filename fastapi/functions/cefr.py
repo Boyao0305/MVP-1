@@ -1,32 +1,34 @@
+# functions/cefr_compare_lists.py — async conversion of DB I/O (minimal changes)
 from __future__ import annotations
+
 import sys
 import os
-import pandas as pd
-from fastapi import HTTPException
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from typing import List, Tuple
-from fastapi import APIRouter, Depends, HTTPException
-  # <- keep your original import
-
-import json
-
-
-from database import SessionLocal, engine, Base
 import json
 from collections import Counter
-from typing import Dict
+from typing import List, Tuple, Dict
+
+import pandas as pd  # kept from original (unused here)
+from fastapi import HTTPException
+
+# Keep original sys.path tweak
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# DB / ORM
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload, joinedload
+
+# Project models & DB
+from database import SessionLocal, engine, Base  # kept for compatibility
 import models
+
+# NLP
 import spacy
 from cefrpy import CEFRSpaCyAnalyzer, CEFRLevel
 
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
+# ──────────────────────────────────────────────────────────────────────────────
+# NLP setup (unchanged)
+# ──────────────────────────────────────────────────────────────────────────────
 NLP = spacy.load("en_core_web_sm")
 
 ABBREVIATION_MAPPING = {
@@ -49,7 +51,6 @@ LEVEL_NAMES = ["A1", "A2", "B1", "B2", "C1", "C2"]   # index = level-1
 
 
 def cefr_unique_stats(text_to_process: str) -> Dict[str, int]:
-
     doc = NLP(text_to_process)
     level_tokens = ANALYZER.analize_doc(doc)
 
@@ -68,23 +69,21 @@ def cefr_unique_stats(text_to_process: str) -> Dict[str, int]:
     return dict(counter)
 
 
-
-
+# Duplicated constants retained to match original file
 LEVEL_NAMES = ["A1", "A2", "B1", "B2", "C1", "C2"]
 THRESHOLDS   = [0.1, 0.1, 0.1, 0.2, 0.2]   # for A1…C1 in order
 
 
 # ----------------------------------------------------------------------
-# Core helper
+# Core helpers (unchanged logic)
 # ----------------------------------------------------------------------
+
 def _proportions(text_stats: dict, list_stats: dict) -> List[float]:
     """Return p(level) for all six CEFR bands."""
     props: List[float] = []
     for lvl in LEVEL_NAMES:
         denom = text_stats.get(lvl, 0)
-        # print(denom)
         numer = list_stats.get(lvl, 0)
-        # print(numer)
         props.append(0.0 if denom == 0 else numer / denom)
     return props
 
@@ -107,7 +106,6 @@ def _score(props: List[float]) -> int:
         props[4] < THRESHOLDS[4],  # C1
     ]
 
-    # find longest prefix of True values
     longest_ok = 0
     for ok in satisfied:
         if ok:
@@ -118,48 +116,47 @@ def _score(props: List[float]) -> int:
 
 
 # ----------------------------------------------------------------------
-# Public API
+# Public API — now async (DB I/O only)
 # ----------------------------------------------------------------------
-# with open("data.json", "r", encoding="utf-8") as f:
-#     python_dict = json.load(f)
-# text = python_dict["text"]
-# words = python_dict["words"]
 from sqlalchemy.orm import joinedload
-def compare_lists_to_text(log_id: int, db: Session ) -> Tuple[int, List[float]]:
-    log = (
-        db.query(models.Learning_log)
-        .options(joinedload(models.Learning_log.l_daily_searched_words))
-        .filter(models.Learning_log.id == log_id)
-        .first()
+
+async def compare_lists_to_text(log_id: int, db: AsyncSession) -> Tuple[int, List[float]]:
+    """Async version using AsyncSession + SELECT. Logic unchanged.
+
+    Returns (score, proportions).
+    """
+    result = await db.execute(
+        select(models.Learning_log)
+        .options(selectinload(models.Learning_log.l_daily_searched_words))
+        .where(models.Learning_log.id == log_id)
     )
+    log = result.scalars().first()
 
     if not log:
         raise HTTPException(404, "Log not found")
 
-    # 2. Flatten list of tuples: [('apple',), ('banana',)] → ['apple', 'banana']
+    # Flatten searched words for this log
     word_list = [w.word for w in log.l_daily_searched_words]
-
-    # 3. Join into a space-separated string
     wordstext = " ".join(word_list)
 
-    # 4. Pass to your other function
-    # wordsresult = use_words_as_text(wordstext)
-
-
+    # Compute CEFR stats
     textresult = log.artical
     text_stats = cefr_unique_stats(str(textresult))
-
     list_stats = cefr_unique_stats(wordstext)
-
 
     props = _proportions(text_stats, list_stats)
     scr   = _score(props)
+
+    # Persist daily_caiji
     log.daily_caiji = scr
-    db.commit()
-    db.refresh(log)
+    await db.commit()
+    await db.refresh(log)
+
+    # (kept original debug prints)
     print(wordstext)
-    print(scr,props)
-    return scr,props
-# print(compare_lists_to_text(text, words))
-# with SessionLocal() as db:
-#     compare_lists_to_text(1, db)
+    print(scr, props)
+    return scr, props
+
+# Example manual test (kept as comment)
+# async with SessionLocal() as db:
+#     await compare_lists_to_text(1, db)

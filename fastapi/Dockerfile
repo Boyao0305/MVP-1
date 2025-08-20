@@ -22,6 +22,7 @@ RUN echo "source activate fastapi-env" >> ~/.bashrc
 
 # 4️⃣ Copy spaCy model and install it
 COPY en_core_web_sm-3.8.0-py3-none-any.whl .
+<<<<<<< Updated upstream
 
 # Install build tools (for compiling Python wheels like blis)
 RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list && \
@@ -50,6 +51,14 @@ RUN /opt/conda/envs/fastapi-env/bin/pip install spacy \
     && /opt/conda/envs/fastapi-env/bin/pip install en_core_web_sm-3.8.0-py3-none-any.whl
 
 # 5️⃣ Copy app source code
+=======
+RUN pip install en_core_web_sm-3.8.0-py3-none-any.whl
+RUN pip install --no-cache-dir \
+    alibabacloud_dysmsapi20170525 \
+    alibabacloud_tea_openapi \
+    alibabacloud_tea_util
+# ✅ 拷贝应用源码到容器中
+>>>>>>> Stashed changes
 COPY website/ website/
 COPY . .
 

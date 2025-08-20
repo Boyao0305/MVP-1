@@ -5,47 +5,38 @@ import re
 import asyncio
 import subprocess
 import shlex
-from fastapi import APIRouter, Query, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Query, BackgroundTasks, HTTPException, Depends
 from fastapi.responses import FileResponse
-<<<<<<< Updated upstream
-=======
 from tools.logger import logger
->>>>>>> Stashed changes
-
-router = APIRouter(prefix="/api")
-
+from functions.auth import authenticate_user, register_user, get_current_user
+from pydantic import BaseModel
+router = APIRouter(prefix="/test")
+class TokenData(BaseModel):
+    user_id: int
+    role: str
 @router.get("/speak")
 async def speak(
     word: str = Query(..., description="要朗读的英文内容"),
     voice: str = Query("en-us", description="发音人，如 en, en-us, en-gb, zh 等"),
     background_tasks: BackgroundTasks = None,
+    current_user: TokenData = Depends(get_current_user),
 ):
+    user_id = current_user.user_id
     try:
+        logger.info(f"收到朗读请求 word={word}, voice={voice}")
+
         # 创建临时音频目录
         temp_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "temp"))
         os.makedirs(temp_dir, exist_ok=True)
+        logger.debug(f"音频临时目录为: {temp_dir}")
 
         # 安全命名音频文件
         safe_word = re.sub(r"[^a-zA-Z0-9_]", "_", word)
         timestamp = int(time.time() * 1000)
         filename = f"{safe_word}_{timestamp}.wav"
         audio_path = os.path.join(temp_dir, filename)
+        logger.debug(f"音频文件路径: {audio_path}")
 
-<<<<<<< Updated upstream
-        # ✅ 调用 espeak 命令合成语音
-        cmd = [
-            "espeak",
-            "-v", voice,          # 设置发音人，如 en-us / en / zh
-            "-s", "150",          # 设置语速（可调）
-            "-w", audio_path,     # 输出路径
-            word
-        ]
-        subprocess.run(cmd, check=True)
-
-        # ✅ 设置响应后删除音频文件
-        if background_tasks:
-            background_tasks.add_task(os.remove, audio_path)
-=======
         # 调用 espeak 命令合成语音（异步，不阻塞事件循环）
         cmd = [
             "espeak",
@@ -66,9 +57,8 @@ async def speak(
             background_tasks = BackgroundTasks()
         background_tasks.add_task(os.remove, audio_path)
         logger.debug(f"添加后台任务，响应后删除音频文件: {audio_path}")
->>>>>>> Stashed changes
 
-        # ✅ 返回音频文件
+        # 返回音频文件
         return FileResponse(
             path=audio_path,
             media_type="audio/wav",
@@ -77,10 +67,8 @@ async def speak(
         )
 
     except subprocess.CalledProcessError as e:
+        logger.error(f"espeak 调用失败: {e}")
         raise HTTPException(status_code=500, detail=f"espeak 调用失败: {e}")
     except Exception as e:
-<<<<<<< Updated upstream
-=======
         logger.exception("服务异常")
->>>>>>> Stashed changes
         raise HTTPException(status_code=500, detail=f"服务异常: {e}")

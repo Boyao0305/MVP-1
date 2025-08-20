@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 docker-compose.yml
 docker_difference/nginx.conf
 docker-compose.yml
@@ -5,3 +6,12 @@ nginx/nginx.conf
 /nginx
 *.yml
 docker-compose.yml
+=======
+#fastapi/key/key.env
+__pycache__/
+*.log
+data/
+*.pyc
+alembic
+docker_difference
+>>>>>>> Stashed changes

@@ -1,4 +1,7 @@
 # routers/learning_log_outline.py
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select, case, func
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
@@ -32,16 +35,21 @@ from functions.cefr import compare_lists_to_text
 from functions.cefr2 import update_average_caiji_for_user
 import json, os, asyncio
 
+from tools.logger import logger 
 
        # ← usual DB-session dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
 
-router = APIRouter(prefix="/api")
+async def get_db():
+    async with SessionLocal() as session:
+        yield session
+
+router = APIRouter(prefix="/test")
 
 # @app.get("/protected")
 # def protected_route(current_user: TokenData = Depends(get_current_user)):
@@ -70,34 +78,11 @@ class TokenData(BaseModel):
 )
 async def read_learning_logs(current_user: TokenData = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     user_id = current_user.user_id
-<<<<<<< Updated upstream
-    # 1️⃣ pick the date (today)
-    # target_date = dt.date.today()
-
-    # 2️⃣ all logs for that user/date, with word lists eagerly loaded
-    # logs = (
-    #     db.query(models.Learning_log)
-    #       .options(
-    #           joinedload(models.Learning_log.daily_new_words),
-    #           joinedload(models.Learning_log.daily_review_words),
-    #       )
-    #       .filter(
-    #           models.Learning_log.user_id == user_id,
-    #           models.Learning_log.date == target_date)
-    #     .order_by(models.Learning_log.id.desc())
-    #     .limit(5)
-    #     .all()
-
-    # )
-    logs = (
-        db.query(models.Learning_log)
-=======
     logger.info(f"用户请求 daily_learning_logs, user_id={user_id}")
 
     # logs
     q_logs = (
         select(models.Learning_log)
->>>>>>> Stashed changes
         .options(
             selectinload(models.Learning_log.daily_new_words),
             selectinload(models.Learning_log.daily_review_words),
@@ -106,30 +91,19 @@ async def read_learning_logs(current_user: TokenData = Depends(get_current_user)
         .order_by(models.Learning_log.id.desc())
         .limit(5)
     )
-<<<<<<< Updated upstream
-=======
     logs = (await db.execute(q_logs)).scalars().all()
     logger.debug(f"查到的 logs 数量: {len(logs)}")
 
->>>>>>> Stashed changes
     if not logs:
+        logger.warning(f"user {user_id} 未查到 logs")
         raise HTTPException(404, "No logs found for that user/date")
 
-<<<<<<< Updated upstream
-    # 3️⃣ pull the user’s learning settings
-    setting = (
-        db.query(models.Learning_setting)
-          .filter(models.Learning_setting.user_id == user_id)
-          .first()
-    )  # Learning_setting: chosed_word_book_id & daily_goal:contentReference[oaicite:0]{index=0}
-=======
     # settings
     q_set = select(models.Learning_setting).where(models.Learning_setting.user_id == user_id)
     setting = (await db.execute(q_set)).scalars().first()
->>>>>>> Stashed changes
 
     if setting is None:
-        # no settings yet ⇒ zero progress, None word_book_id
+        logger.info(f"user {user_id} 未设置学习设置")
         info = AdditionalInformation(
             word_book_id=None,
             daily_goal=0,
@@ -142,25 +116,14 @@ async def read_learning_logs(current_user: TokenData = Depends(get_current_user)
 
     word_book_id = setting.chosed_word_book_id
     daily_goal = setting.daily_goal
+    logger.debug(f"user {user_id} 的 word_book_id={word_book_id}, daily_goal={daily_goal}")
 
-<<<<<<< Updated upstream
-    # 4️⃣ gather all word-IDs in that word-book (middle table word_wordbook_links):contentReference[oaicite:1]{index=1}
-=======
     # word-book ids
->>>>>>> Stashed changes
     word_ids_subq = (
         select(models.Word_wordbook_link.word_id)
         .where(models.Word_wordbook_link.word_book_id == word_book_id)
         .subquery()
     )
-<<<<<<< Updated upstream
-    progression1 = 0
-    total_words = db.scalar(select(func.count()).select_from(word_ids_subq)) or 0
-
-    # 5️⃣ count this user’s learning / learned words among that set (word_statuss table):contentReference[oaicite:2]{index=2}
-    if total_words == 0:
-        learning_prop = learned_prop = 0.0
-=======
     total_words = (
         await db.scalar(select(func.count()).select_from(word_ids_subq))
     ) or 0
@@ -170,7 +133,6 @@ async def read_learning_logs(current_user: TokenData = Depends(get_current_user)
         learning_prop = learned_prop = 0.0
         progression1 = 0
         logger.info(f"user {user_id} word_book_id={word_book_id} 没有单词")
->>>>>>> Stashed changes
     else:
         result = await db.execute(
             select(
@@ -178,35 +140,16 @@ async def read_learning_logs(current_user: TokenData = Depends(get_current_user)
                 func.sum(case((models.Word_status.status == "learned", 1), else_=0)),
             ).where(
                 models.Word_status.users_id == user_id,
-<<<<<<< Updated upstream
-                models.Word_status.words_id.in_(word_ids_subq),  # type: ignore[arg-type]
-                models.Word_status.status == "learning",
-            )
-        ) or 0
-
-        learned_count = db.scalar(
-            select(func.count())
-            .select_from(models.Word_status)
-            .where(
-                models.Word_status.users_id == user_id,
-                models.Word_status.words_id.in_(word_ids_subq),  # type: ignore[arg-type]
-                models.Word_status.status == "learned",
-            )
-        ) or 0
-        # progression = (learning_count + learned_count) / 2
-        # progression = round(progression)
-=======
                 models.Word_status.words_id.in_(select(word_ids_subq.c.word_id)),
             )
         )
         learning_count, learned_count = result.one()
         learning_count = learning_count or 0
         learned_count = learned_count or 0
->>>>>>> Stashed changes
         progression1 = learning_count + learned_count
         learning_prop = learning_count / total_words
         learned_prop  = learned_count  / total_words
-
+        logger.debug(f"user {user_id} 学习中: {learning_count}, 已学会: {learned_count}")
 
     info = AdditionalInformation(
         word_book_id=word_book_id,
@@ -216,68 +159,36 @@ async def read_learning_logs(current_user: TokenData = Depends(get_current_user)
         progression=progression1,
         total=total_words,
     )
-
+    logger.success(f"user {user_id} 查询返回成功")
     return {"logs": logs, "additional_information": info}
 
-<<<<<<< Updated upstream
-@router.get(
-    "/daily_learning_logs/{user_id}",
-    response_model=DailyLogsWithInfoOut,
-    summary="Return today's learning-logs plus user-level info",
-)
-def read_learning_logs(user_id: int, db: Session = Depends(get_db)):
-    # 1️⃣ pick the date (today)
-    # target_date = dt.date.today()
-
-    # 2️⃣ all logs for that user/date, with word lists eagerly loaded
-    # logs = (
-    #     db.query(models.Learning_log)
-    #       .options(
-    #           joinedload(models.Learning_log.daily_new_words),
-    #           joinedload(models.Learning_log.daily_review_words),
-    #       )
-    #       .filter(
-    #           models.Learning_log.user_id == user_id,
-    #           models.Learning_log.date == target_date)
-    #     .order_by(models.Learning_log.id.desc())
-    #     .limit(5)
-    #     .all()
-
-    # )
-    logs = (
-        db.query(models.Learning_log)
-=======
 @router.get("/daily_learning_logs/{user_id}", response_model=DailyLogsWithInfoOut)
 async def read_learning_logs(user_id: int, db: AsyncSession = Depends(get_db)):
     # logs
+
     q_logs = (
         select(models.Learning_log)
->>>>>>> Stashed changes
         .options(
-            joinedload(models.Learning_log.daily_new_words),
-            joinedload(models.Learning_log.daily_review_words),
+            selectinload(models.Learning_log.daily_new_words),
+            selectinload(models.Learning_log.daily_review_words),
         )
-        .filter(
-            models.Learning_log.user_id == user_id)
+        .where(models.Learning_log.user_id == user_id)
         .order_by(models.Learning_log.id.desc())
         .limit(5)
-        .all()
     )
+    logs = (await db.execute(q_logs)).scalars().all()
     if not logs:
-        raise HTTPException(404, "No logs found for that user/date")
+        raise HTTPException(status_code=404, detail="No logs found for that user.")
 
-    # 3️⃣ pull the user’s learning settings
-    setting = (
-        db.query(models.Learning_setting)
-          .filter(models.Learning_setting.user_id == user_id)
-          .first()
-    )  # Learning_setting: chosed_word_book_id & daily_goal:contentReference[oaicite:0]{index=0}
 
-    if setting is None:
-        # no settings yet ⇒ zero progress, None word_book_id
+    # settings
+    q_set = select(models.Learning_setting).where(models.Learning_setting.user_id == user_id)
+    setting = (await db.execute(q_set)).scalars().first()
+
+    if setting is None or setting.chosed_word_book_id is None:
         info = AdditionalInformation(
             word_book_id=None,
-            daily_goal=0,
+            daily_goal=setting.daily_goal if setting else 0,
             learning_proportion=0.0,
             learned_proportion=0.0,
             progression=0,
@@ -288,67 +199,60 @@ async def read_learning_logs(user_id: int, db: AsyncSession = Depends(get_db)):
     word_book_id = setting.chosed_word_book_id
     daily_goal = setting.daily_goal
 
-    # 4️⃣ gather all word-IDs in that word-book (middle table word_wordbook_links):contentReference[oaicite:1]{index=1}
     word_ids_subq = (
         select(models.Word_wordbook_link.word_id)
         .where(models.Word_wordbook_link.word_book_id == word_book_id)
         .subquery()
     )
-    progression1 = 0
-    total_words = db.scalar(select(func.count()).select_from(word_ids_subq)) or 0
 
-    # 5️⃣ count this user’s learning / learned words among that set (word_statuss table):contentReference[oaicite:2]{index=2}
+    total_words = (
+        await db.scalar(select(func.count()).select_from(word_ids_subq))
+    ) or 0
+
     if total_words == 0:
         learning_prop = learned_prop = 0.0
+        progression1 = 0
     else:
-        learning_count = db.scalar(
-            select(func.count())
-            .select_from(models.Word_status)
-            .where(
+        result = await db.execute(
+            select(
+                func.sum(case((models.Word_status.status == "learning", 1), else_=0)),
+                func.sum(case((models.Word_status.status == "learned", 1), else_=0)),
+            ).where(
                 models.Word_status.users_id == user_id,
-                models.Word_status.words_id.in_(word_ids_subq),  # type: ignore[arg-type]
-                models.Word_status.status == "learning",
+                models.Word_status.words_id.in_(select(word_ids_subq.c.word_id)),
             )
-        ) or 0
+        )
+        learning_count, learned_count = result.one()
 
-        learned_count = db.scalar(
-            select(func.count())
-            .select_from(models.Word_status)
-            .where(
-                models.Word_status.users_id == user_id,
-                models.Word_status.words_id.in_(word_ids_subq),  # type: ignore[arg-type]
-                models.Word_status.status == "learned",
-            )
-        ) or 0
-        # progression = (learning_count + learned_count) / 2
-        # progression = round(progression)
+        learning_count = learning_count or 0
+        learned_count = learned_count or 0
+
         progression1 = learning_count + learned_count
         learning_prop = learning_count / total_words
-        learned_prop  = learned_count  / total_words
-
+        learned_prop = learned_count / total_words
 
     info = AdditionalInformation(
         word_book_id=word_book_id,
-        daily_goal=daily_goal,
-        learning_proportion=learning_prop,
-        learned_proportion=learned_prop,
+        daily_goal=daily_goal or 0,
+        learning_proportion=round(learning_prop, 4),
+        learned_proportion=round(learned_prop, 4),
         progression=progression1,
         total=total_words,
     )
-
     return {"logs": logs, "additional_information": info}
-<<<<<<< Updated upstream
-=======
 
 from key.apikey_vault import APIKeyVault
 
 APIKeyVault = APIKeyVault()
->>>>>>> Stashed changes
 
 # ---------- DashScope-compatible client ------------------------------------
+# async_client = AsyncOpenAI(
+#     api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+#     base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
+# )
 async_client = AsyncOpenAI(
-    api_key=os.getenv("DASHSCOPE_API_KEY", "sk-5ccb1709bc5b4ecbbd3aedaf69ca969b"),
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    api_key = "sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
 )
 
 # ---------- prompt templates ----------------------------------------------
@@ -369,96 +273,16 @@ PROMPT_TMPL_ARTICLE = (
 # ---------- endpoint -------------------------------------------------------
 @router.post(
     "/generation/{log_id}",
-    response_class=StreamingResponse,         # ← only the article is returned
+    response_class=StreamingResponse,
     summary="Generate outline, titles, then full article for a learning log",
 )
 async def generate_article_for_log(
     log_id: int,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),   # ← AsyncSession here
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),# ← AsyncSession here
 ):
-<<<<<<< Updated upstream
-    target_date = dt.date.today()
-    # 2️⃣ all logs for that user/date, with word lists eagerly loaded
-    log = (
-        db.query(models.Learning_log)
-        .options(
-            joinedload(models.Learning_log.daily_new_words),
-            joinedload(models.Learning_log.daily_review_words),
-        )
-        .filter(
-
-            models.Learning_log.id == log_id)
-        .order_by(models.Learning_log.id.desc())
-        .first()
-
-    )
-    # models.Learning_log.date == target_date,
-    if not log:
-        raise HTTPException(404, "Learning log not found")
-    if not log.daily_new_words:
-        raise HTTPException(400, "This log has no daily-new words attached")
-
-    # 2️⃣ first LLM call (outline & titles) ---------------------------------
-    words_list = [w.word for w in log.daily_new_words]
-    for w2 in log.daily_review_words:
-        words_list.append(w2.word)
-
-    # 4️⃣ second LLM call (stream out to client) ---------------------------
-    prompt2 = PROMPT_TMPL_ARTICLE.format(
-        english_title=log.english_title,
-        outline=log.outline,
-        vocab=", ".join(words_list),
-        CEFR=log.CEFR or "A2",
-    )
-
-    stream = await async_client.chat.completions.create(
-        model="deepseek-v3",
-        messages=[{"role": "user", "content": prompt2}],
-        stream=True,
-    )
-
-    collected = []
-
-    def save_article_to_db(log_id: int, article_text: str):
-        from database import SessionLocal  # adjust if your session maker is named differently
-        db_bg = SessionLocal()
-        try:
-            log_to_update = db_bg.query(models.Learning_log).filter(models.Learning_log.id == log_id).first()
-            if log_to_update:
-                log_to_update.artical = article_text
-                db_bg.commit()
-                print("✅ Article saved in background")
-            else:
-                print("❌ Could not find log to update")
-        except Exception as e:
-            print("❌ Background DB commit failed:", e)
-        finally:
-            db_bg.close()
-
-    async def article_stream():
-        async for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                text = chunk.choices[0].delta.content
-                collected.append(text)
-                yield text.encode()
-
-        final_article = "".join(collected).strip()
-        background_tasks.add_task(save_article_to_db, log.id, final_article)
-
-    # 🚨 Fix: Create a new session in background thread
-
-
-
-
-    return StreamingResponse(article_stream(), media_type="text/plain")
-
-
-@router.get("/word_search/{log_id}/{word}")
-
-def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
-    log = db.query(models.Learning_log).filter_by(id=log_id).first()
-=======
+    user_id = current_user.user_id
     logger.info(f"收到生成学习日志文章请求 log_id={log_id}")
     try:
         # 1) Load the log (async SQLAlchemy style)
@@ -473,6 +297,9 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
                 .order_by(models.Learning_log.id.desc())
             )
         ).scalars().first()
+        if log.user_id != user_id:
+            raise HTTPException(300, "this is not your log")
+
 
         if not log:
             raise HTTPException(404, "Learning log not found")
@@ -531,31 +358,24 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/word_search/{log_id}/{word}")
-async def word_search(word: str, log_id: int, db: AsyncSession = Depends(get_db)):
+async def word_search(word: str, log_id: int, db: AsyncSession = Depends(get_db), current_user: TokenData = Depends(get_current_user),):
+    user_id = current_user.user_id
     logger.info(f"收到 word_search 请求，log_id={log_id}, word={word}")
 
     # 查找日志
     log = (
         await db.execute(select(models.Learning_log).where(models.Learning_log.id == log_id))
     ).scalars().first()
->>>>>>> Stashed changes
     if log is None:
+        logger.warning(f"log_id={log_id} 未找到学习日志")
         raise HTTPException(404, detail="Learning log not found")
+    if log.user_id != user_id:
+        raise HTTPException(300, "this is not your log")
 
     # 记录查询词
     searched = models.Daily_searched_word(word=word, log_id=log_id)
     db.add(searched)
     try:
-<<<<<<< Updated upstream
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        # With the composite PK (log_id, id) this fires if the *same* word is
-        # already linked to the log (or any other PK violation)
-        raise HTTPException(
-            400, detail="This word is already recorded for that log."
-        )
-=======
         await db.commit()
         logger.debug(f"log_id={log_id}, word={word} 添加到 Daily_searched_word 成功")
     except Exception as e:  # IntegrityError 等
@@ -563,236 +383,47 @@ async def word_search(word: str, log_id: int, db: AsyncSession = Depends(get_db)
         logger.warning(f"log_id={log_id}, word={word} 添加失败/已存在: {e}")
         raise HTTPException(400, detail="This word is already recorded for that log.")
 
->>>>>>> Stashed changes
     word0 = word.lower()
     forms_to_try = [word]
     output = None
     if word0.endswith("ing") or word0.endswith("ed"):
-        # word4 = (
-        #     db.query(models.Word)
-        #
-        #     .filter(
-        #         models.Word.word == form
-        #     )
-        #     .first()
-        # )
-        # if word4:
-        #     print("word1")
-        #     output = word1.definition + ", " + word1.phonetic
-        #     target_date = dt.date.today()
-        #     review_search = (
-        #         db.query(models.Learning_log)
-        #         .options(
-        #             joinedload(models.Learning_log.daily_review_words),
-        #         )
-        #         .filter(
-        #             models.Learning_log.id == log_id, )
-        #         .first()
-        #
-        #     )
-        #
-        #     if word1 in review_search.daily_review_words:
-        #         review_search2 = (
-        #             db.query(models.Daily_review_word_link)
-        #             .filter(
-        #                 models.Daily_review_word_link.learning_log_id == log_id,
-        #                 models.Daily_review_word_link.word_id == word1.id,
-        #             )
-        #             .first()
-        #         )
-        #         review_search2.review_indicator = 1
-        #         db.commit()
+        logger.debug(f"尝试直接查字典，word={word0} 结尾为 ing/ed")
         word5 = (
-<<<<<<< Updated upstream
-            db.query(models.Dictionary)
-
-            .filter(
-                models.Dictionary.word == word0)
-            .first()
-        )
-=======
             await db.execute(select(models.Dictionary).where(models.Dictionary.word == word0))
         ).scalars().first()
->>>>>>> Stashed changes
         if word5:
+            logger.info(f"word={word0} 在 Dictionary 中找到")
             output = word5.definition
         else:
+            logger.info(f"word={word0} 未在 Dictionary 中找到，调用 LLM 查询")
             client = OpenAI(
-                # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-                api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-                # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+                api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+                base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
             )
-
             completion = client.chat.completions.create(
-                model="deepseek-v3",  # 此处以 deepseek-r1 为例，可按需更换模型名称。
+                model="deepseek-v3",
                 messages=[
                     {'role': 'user',
                      'content': f"""请返回{word0}单词的中文定义和音标，请只返回一个或几个词性缩写和对应的中文定义以及单词音标(/的形式），并用逗号隔开 ; 请考虑所有的词性可能性（ed或ing结尾的词可做形容词和动词（过去式和进行式））"""
                      }
                 ]
             )
-
             definition5 = completion.choices[0].message.content
-            word6 = Dictionary(word=word0, definition=definition5)
+            word6 = models.Dictionary(word=word0, definition=definition5)
             db.add(word6)
-<<<<<<< Updated upstream
-            db.commit()
-=======
             await db.commit()
             logger.info(f"word={word0} 的定义经 LLM 查询并已写入 Dictionary")
->>>>>>> Stashed changes
             output = definition5
     else:
-
-        # Try manual stem variants
         if word0.endswith("ies"):
-            forms_to_try.append(word[:-3] + "y")  # studies → study
-        # if word0.endswith("ing"):
-        #     forms_to_try.append(word[:-3])        # eating → eat
-        # if word0.endswith("ed"):
-        #     forms_to_try.append(word[:-2])        # worked → work
+            forms_to_try.append(word[:-3] + "y")
         if word0.endswith("s") and len(word) > 3:
-            forms_to_try.append(word[:-1])        # cars → car
-        # return forms_to_try   # Remove duplicates
+            forms_to_try.append(word[:-1])
         forms_to_try = list(dict.fromkeys(forms_to_try))
-        #
-        # # Try each form
+        logger.debug(f"尝试 forms: {forms_to_try}")
 
         for form in forms_to_try:
-                # result = reverse_dict.get(form)
-                word1 = (
-                    db.query(models.Word)
-
-                    .filter(
-                        models.Word.word == form
-                    )
-                    .first()
-                )
-                word2 = (
-                    db.query(models.Dictionary)
-
-                             .filter(
-                        models.Dictionary.word == form
-                    )
-                             .first()
-                             )
-                if word1:
-                    print("word1")
-                    output = word1.definition+", "+word1.phonetic
-                    target_date = dt.date.today()
-                    review_search = (
-                        db.query(models.Learning_log)
-                        .options(
-                            joinedload(models.Learning_log.daily_review_words),
-                        )
-                        .filter(
-                            models.Learning_log.id == log_id,)
-                        .first()
-
-                    )
-
-                    if word1 in review_search.daily_review_words:
-                        review_search2 = (
-                            db.query(models.Daily_review_word_link)
-                            .filter(
-                                models.Daily_review_word_link.learning_log_id == log_id,
-                                models.Daily_review_word_link.word_id == word1.id,
-                            )
-                            .first()
-                        )
-                        review_search2.review_indicator = 1
-                        db.commit()
-                    else:
-                        pass
-
-                else:
-                    pass
-
-                if word2:
-                    print("word2")
-                    output = word2.definition
-                else:
-                    pass
-
-        if not output:
-
-            client = OpenAI(
-                # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-                api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-                # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-            )
-
-            completion = client.chat.completions.create(
-                model="deepseek-v3",  # 此处以 deepseek-r1 为例，可按需更换模型名称。
-                messages=[
-                    {'role': 'user',
-                     'content': f"""请返回{word0}单词的中文定义和音标，请只返回一个或几个词性缩写和对应的中文定义以及单词音标(/的形式），并用逗号隔开"""
-                     }
-                ]
-            )
-
-            definition2 = completion.choices[0].message.content
-            word3 = Dictionary(word = word0, definition = definition2 )
-            db.add(word3)
-            db.commit()
-            output = definition2
-
-
-    return output
-
-@router.get("/english_word_search/{log_id}/{word}")
-
-def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
-    log = db.query(models.Learning_log).filter_by(id=log_id).first()
-    if log is None:
-        raise HTTPException(404, detail="Learning log not found")
-
-    # 2️⃣ insert the searched word
-    searched = models.Daily_searched_word(word=word, log_id=log_id)
-    db.add(searched)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        # With the composite PK (log_id, id) this fires if the *same* word is
-        # already linked to the log (or any other PK violation)
-        raise HTTPException(
-            400, detail="This word is already recorded for that log."
-        )
-    word0 = word.lower()
-    forms_to_try = [word]
-
-    # Try manual stem variants
-    if word0.endswith("ies"):
-        forms_to_try.append(word[:-3] + "y")  # studies → study
-    # if word0.endswith("ing"):
-    #     forms_to_try.append(word[:-3])        # eating → eat
-    # if word0.endswith("ed"):
-    #     forms_to_try.append(word[:-2])        # worked → work
-    if word0.endswith("s") and len(word) > 3:
-        forms_to_try.append(word[:-1])        # cars → car
-    # return forms_to_try   # Remove duplicates
-    forms_to_try = list(dict.fromkeys(forms_to_try))
-    #
-    # # Try each form
-
-    for form in forms_to_try:
-            # result = reverse_dict.get(form)
             word1 = (
-<<<<<<< Updated upstream
-                db.query(models.Word)
-
-                .filter(
-                    models.Word.word == form
-                )
-                .first()
-            )
-            if word1:
-                print("word1")
-                target_date = dt.date.today()
-=======
                 await db.execute(select(models.Word).where(models.Word.word == form))
             ).scalars().first()
             word2 = (
@@ -801,25 +432,14 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
             if word1:
                 logger.info(f"form={form} 在 Word 表中找到")
                 output = word1.definition + ", " + word1.phonetic
->>>>>>> Stashed changes
                 review_search = (
                     await db.execute(
                         select(models.Learning_log)
                         .options(selectinload(models.Learning_log.daily_review_words))
                         .where(models.Learning_log.id == log_id)
                     )
-<<<<<<< Updated upstream
-                    .filter(
-                        models.Learning_log.id == log_id,)
-                    .first()
-
-                )
-
-                if word1 in review_search.daily_review_words:
-=======
                 ).scalars().first()
                 if review_search and word1 in review_search.daily_review_words:
->>>>>>> Stashed changes
                     review_search2 = (
                         await db.execute(
                             select(models.Daily_review_word_link).where(
@@ -827,13 +447,6 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
                                 models.Daily_review_word_link.word_id == word1.id,
                             )
                         )
-<<<<<<< Updated upstream
-                        .first()
-                    )
-                    review_search2.review_indicator = 1
-                    db.commit()
-
-=======
                     ).scalars().first()
                     if review_search2:
                         review_search2.review_indicator = 1
@@ -863,79 +476,41 @@ def word_search(word: str, log_id: int, db: Session = Depends(get_db)):
             await db.commit()
             logger.info(f"word={word0} 的定义经 LLM 查询并已写入 Dictionary")
             output = definition2
->>>>>>> Stashed changes
 
-
-
-
-
-    client = OpenAI(
-        # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-        api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-        # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-    )
-
-    completion = client.chat.completions.create(
-        model="deepseek-v3",  # 此处以 deepseek-r1 为例，可按需更换模型名称。
-        messages=[
-            {'role': 'user',
-             'content': f"""请返回{word0}单词的英文解释和音标，请只返回一个或几个词性缩写和对应的英文解释以及单词音标(/的形式），并用逗号隔开"""
-             }
-        ]
-    )
-
-    definition2 = completion.choices[0].message.content
-    output = definition2
-
+    logger.info(f"word_search 返回结果: {output}")
     return output
 
-<<<<<<< Updated upstream
-@router.get("/word_unsearch/{log_id}/{word}")
-
-def word_unsearch(word: str, log_id: int, db: Session = Depends(get_db)):
-    log = db.query(models.Learning_log).filter_by(id=log_id).first()
-=======
 @router.get("/english_word_search/{log_id}/{word}")
-async def word_search(word: str, log_id: int, db: AsyncSession = Depends(get_db)):
+async def word_search(word: str, log_id: int, db: AsyncSession = Depends(get_db),current_user: TokenData = Depends(get_current_user)):
+    user_id = current_user.user_id
     logger.info(f"收到 english_word_search 请求 log_id={log_id}, word={word}")
 
     log = (
         await db.execute(select(models.Learning_log).where(models.Learning_log.id == log_id))
     ).scalars().first()
->>>>>>> Stashed changes
     if log is None:
+        logger.warning(f"log_id={log_id} 未找到学习日志")
         raise HTTPException(404, detail="Learning log not found")
-
+    if log.user_id != user_id:
+        raise HTTPException(300, "this is not your log")
     # 2️⃣ insert the searched word
     searched = models.Daily_searched_word(word=word, log_id=log_id)
     db.add(searched)
     try:
-<<<<<<< Updated upstream
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        # With the composite PK (log_id, id) this fires if the *same* word is
-        # already linked to the log (or any other PK violation)
-=======
         await db.commit()
         logger.debug(f"log_id={log_id}, word={word} 添加到 Daily_searched_word 成功")
     except Exception as e:
         await db.rollback()
         logger.warning(f"log_id={log_id}, word={word} 已经存在于 Daily_searched_word: {e}")
->>>>>>> Stashed changes
         raise HTTPException(
             400, detail="This word is already recorded for that log."
         )
+
     word0 = word.lower()
     forms_to_try = [word]
 
-
     # Try manual stem variants
     if word0.endswith("ies"):
-<<<<<<< Updated upstream
-        forms_to_try.append(word[:-3] + "y")  # studies → study
-=======
         forms_to_try.append(word[:-3] + "y")
     if word0.endswith("s") and len(word) > 3:
         forms_to_try.append(word[:-1])
@@ -995,7 +570,8 @@ async def word_search(word: str, log_id: int, db: AsyncSession = Depends(get_db)
     return output
 
 @router.get("/word_unsearch/{log_id}/{word}")
-async def word_unsearch(word: str, log_id: int, db: AsyncSession = Depends(get_db)):
+async def word_unsearch(word: str, log_id: int, db: AsyncSession = Depends(get_db), current_user: TokenData = Depends(get_current_user)):
+    user_id = current_user.user_id
     logger.info(f"收到 word_unsearch 请求 log_id={log_id}, word={word}")
 
     log = (
@@ -1004,6 +580,8 @@ async def word_unsearch(word: str, log_id: int, db: AsyncSession = Depends(get_d
     if log is None:
         logger.warning(f"log_id={log_id} 未找到学习日志")
         raise HTTPException(404, detail="Learning log not found")
+    if log.user_id != user_id:
+        raise HTTPException(300, "this is not your log")
 
     searched = models.Daily_searched_word(word=word, log_id=log_id)
     db.add(searched)
@@ -1022,55 +600,17 @@ async def word_unsearch(word: str, log_id: int, db: AsyncSession = Depends(get_d
 
     if word0.endswith("ies"):
         forms_to_try.append(word[:-3] + "y")
->>>>>>> Stashed changes
     if word0.endswith("ing"):
-        forms_to_try.append(word[:-3])        # eating → eat
+        forms_to_try.append(word[:-3])
     if word0.endswith("ed"):
-        forms_to_try.append(word[:-2])        # worked → work
+        forms_to_try.append(word[:-2])
     if word0.endswith("s") and len(word) > 3:
-        forms_to_try.append(word[:-1])        # cars → car
-    # return forms_to_try   # Remove duplicates
+        forms_to_try.append(word[:-1])
     forms_to_try = list(dict.fromkeys(forms_to_try))
-    #
-    # # Try each form
+    logger.debug(f"word_unsearch forms_to_try: {forms_to_try}")
+
     output = None
     for form in forms_to_try:
-<<<<<<< Updated upstream
-            # result = reverse_dict.get(form)
-            word1 = (
-                db.query(models.Word)
-
-                .filter(
-                    models.Word.word == form
-                )
-                .first()
-            )
-            if word1:
-                # output = word1.definition+", "+word1.phonetic
-                target_date = dt.date.today()
-                review_search = (
-                    db.query(models.Learning_log)
-                    .options(
-                        joinedload(models.Learning_log.daily_review_words),
-                    )
-                    .filter(
-                        models.Learning_log.id == log_id,)
-                    .first()
-
-                )
-
-                if word1 in review_search.daily_review_words:
-                    review_search2 = (
-                        db.query(models.Daily_review_word_link)
-                        .filter(
-                            models.Daily_review_word_link.learning_log_id == log_id,
-                            models.Daily_review_word_link.word_id == word1.id,
-                        )
-                        .first()
-                    )
-                    review_search2.review_indicator = 0
-                    db.commit()
-=======
         word1 = (
             await db.execute(select(models.Word).where(models.Word.word == form))
         ).scalars().first()
@@ -1096,12 +636,18 @@ async def word_unsearch(word: str, log_id: int, db: AsyncSession = Depends(get_d
                     review_search2.review_indicator = 0
                     await db.commit()
                     logger.info(f"log_id={log_id}, word_id={word1.id} review_indicator 已置为0")
->>>>>>> Stashed changes
                     output = "oui"
                 else:
+                    logger.warning(f"log_id={log_id}, word_id={word1.id} 未找到 Daily_review_word_link")
                     output = "none"
             else:
+                logger.info(f"form={form} 不在该日志的 daily_review_words")
                 output = "none"
+        else:
+            logger.info(f"form={form} 未在 Word 表找到")
+            output = "none"
+
+    logger.info(f"word_unsearch 返回: {output}")
     return output
 
 class LLMRequest(BaseModel):
@@ -1111,71 +657,91 @@ class LLMRequest(BaseModel):
     response_class=StreamingResponse,
     summary="Stream an LLM answer for the given content",
 )
-async def llm_stream(category: str,req: LLMRequest):
+async def llm_stream(category: str, req: LLMRequest, current_user: TokenData = Depends(get_current_user)):
     """Forward `content` to the LLM and stream the raw answer back."""
+    logger.info(f"收到 content_search 请求, category={category}, content={req.content}")
 
-    # 1️⃣  initialise client (reuse a single instance in real apps)
-    client = OpenAI(
-        # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-        api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-        # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-    )
-    prompt_word = f"请给出这个英文词组的中文翻译，请只返回答案本身；如果英文内容不是词组，请返回“内容不是词组”：{req.content}"
-    prompt_phrase = f"请猜测语境并给出这个英文句子的中文翻译，请只返回答案本身：{req.content}"
-    if category == "word_group":
-        prompt = prompt_word
-    else:
-        prompt = prompt_phrase
-    # 2️⃣  start streaming call
-    stream = await async_client.chat.completions.create(
-        model="deepseek-v3",                # pick the model you like
-        messages=[{"role": "user", 'content': prompt}],
-        stream=True,
-    )
+    try:
+        client = OpenAI(
+            api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+            base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
+        )
+        prompt_word = f"请给出这个英文词组的中文翻译，请只返回答案本身；如果英文内容不是词组，请返回“内容不是词组”：{req.content}"
+        prompt_phrase = f"请猜测语境并给出这个英文句子的中文翻译，请只返回答案本身：{req.content}"
+        if category == "word_group":
+            prompt = prompt_word
+        else:
+            prompt = prompt_phrase
+        logger.debug(f"category={category}, prompt={prompt}")
 
-    # 3️⃣  forward tokens to the caller as they arrive
-    async def token_gen():
-        async for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content.encode()
+        # 开始流式 LLM 调用
+        stream = await async_client.chat.completions.create(
+            model="deepseek-v3",
+            messages=[{"role": "user", "content": prompt}],
+            stream=True,
+        )
+        logger.info(f"category={category}, LLM 流式生成开始")
 
-    return StreamingResponse(token_gen(), media_type="text/plain")
+        async def token_gen():
+            try:
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content.encode()
+                logger.info(f"category={category}, content_search 流式输出完成")
+            except Exception as e:
+                logger.exception(f"category={category}, content_search 流式输出异常: {e}")
+                raise
+
+        return StreamingResponse(token_gen(), media_type="text/plain")
+    except Exception as e:
+        logger.exception(f"category={category}, content_search 服务异常: {e}")
+        raise HTTPException(500, f"服务异常: {e}")
 class LLMRequest2(BaseModel):
     content: str
     translation: str
 @router.post(
-    "/phrase_explanation/{user_id}",
+    "/phrase_explanation",
     response_class=StreamingResponse,
     summary="Stream an LLM answer for the given content",
 )
-async def llm_stream(user_id: int, req: LLMRequest2):
+async def llm_stream(req: LLMRequest2, current_user: TokenData = Depends(get_current_user)):
     """Forward `content` to the LLM and stream the raw answer back."""
+    user_id = current_user.user_id
+    logger.info(f"收到 phrase_explanation 请求, user_id={user_id}, content={req.content}")
 
-    # 1️⃣  initialise client (reuse a single instance in real apps)
-    client = OpenAI(
-        # 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：api_key="sk-xxx",
-        api_key="sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-        # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-    )
+    try:
+        client = OpenAI(
+            api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+            base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
+        )
 
-    prompt_explication = f"请用中文相对简短得解释这个英语句子（长难句）的意思（分模块解释，而非直接给出翻译），再列出中的重要语法点（固定搭配，表达，词组等，请最多挑出3-4点做简短的解释. ）{req.content}"
+        prompt_explication = (
+            f"请用中文相对简短得解释这个英语句子（长难句）的意思（分模块解释，而非直接给出翻译），"
+            f"再列出中的重要语法点（固定搭配，表达，词组等，请最多挑出3-4点做简短的解释. ）{req.content}"
+        )
+        logger.debug(f"user_id={user_id}, prompt_explication={prompt_explication}")
 
-    # 2️⃣  start streaming call
-    stream = await async_client.chat.completions.create(
-        model="deepseek-v3",                # pick the model you like
-        messages=[{"role": "user", 'content': prompt_explication}],
-        stream=True,
-    )
+        stream = await async_client.chat.completions.create(
+            model="deepseek-v3",
+            messages=[{"role": "user", 'content': prompt_explication}],
+            stream=True,
+        )
+        logger.info(f"user_id={user_id}, LLM 流式生成开始")
 
-    # 3️⃣  forward tokens to the caller as they arrive
-    async def token_gen():
-        async for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content.encode()
+        async def token_gen():
+            try:
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content.encode()
+                logger.success(f"user_id={user_id}, phrase_explanation 流式输出完成")  # 用 success 记录完成
+            except Exception as e:
+                logger.exception(f"user_id={user_id}, phrase_explanation 流式输出异常: {e}")
+                raise
 
-    return StreamingResponse(token_gen(), media_type="text/plain")
+        return StreamingResponse(token_gen(), media_type="text/plain")
+    except Exception as e:
+        logger.exception(f"user_id={user_id}, phrase_explanation 服务异常: {e}")
+        raise HTTPException(500, f"服务异常: {e}")
 # --------------------------- main endpoint -------------------------------
 @router.post(
     "/finish_reading/{log_id}",
@@ -1183,8 +749,10 @@ async def llm_stream(user_id: int, req: LLMRequest2):
 )
 async def review_update(
     log_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),current_user: TokenData = Depends(get_current_user)
 ):
+    user_id = current_user.user_id
+
     """
     • For every review word in the given learning-log:
         – if `review_indicator == 0` **and** the user’s `Word_status.status`
@@ -1192,90 +760,6 @@ async def review_update(
         – When the factor reaches ≥ 0.9, flip status → *learned*.
     • All other cases are skipped.
     """
-<<<<<<< Updated upstream
-    log = (
-        db.query(models.Learning_log)                     # learning_logs table
-          .filter(models.Learning_log.id == log_id)
-          .options(joinedload(models.Learning_log.l_user))
-          .first()
-    )
-    if not log:
-        raise HTTPException(404, "Learning-log not found")
-    log.status = 1
-    user_id = log.user_id
-
-    review_links = (
-        db.query(models.Daily_review_word_link)           # daily_review_word_links :contentReference[oaicite:0]{index=0}
-          .filter(models.Daily_review_word_link.learning_log_id == log_id)
-          .all()
-    )
-
-    touched, promoted, started= 0, 0, 0
-    for link in review_links:
-        # if link.review_indicator != 0:
-        #     continue                                      # already reviewed
-
-        ws = (
-            db.query(models.Word_status)                  # word_statuss :contentReference[oaicite:1]{index=1}
-              .filter(
-                  models.Word_status.users_id == user_id,
-                  models.Word_status.words_id == link.word_id,
-              )
-              .first()
-        )
-        if not ws or ws.status == "learned" :
-            continue
-        if ws.status == "learning":
-
-            if link.review_indicator == 0:
-
-                ws.learning_factor = min(ws.learning_factor + 0.5, 1.0)
-                touched += 1
-                if ws.learning_factor >= 0.9:
-                    ws.status = "learned"
-                    promoted += 1
-            else:
-                continue
-        if ws.status == "unlearned":
-            ws.status = "learning"
-            started += 1
-
-    new_links = (
-        db.query(models.Daily_new_word_link)  # daily_review_word_links :contentReference[oaicite:0]{index=0}
-        .filter(models.Daily_new_word_link.learning_log_id == log_id)
-        .all()
-    )
-
-    for link in new_links:
-        # if link.review_indicator != 0:
-        #     continue                                      # already reviewed
-
-        ws = (
-            db.query(models.Word_status)  # word_statuss :contentReference[oaicite:1]{index=1}
-            .filter(
-                models.Word_status.users_id == user_id,
-                models.Word_status.words_id == link.word_id,
-            )
-            .first()
-        )
-        if not ws or ws.status == "learned":
-            continue
-        if ws.status == "learning":
-
-            continue
-
-        if ws.status == "unlearned":
-            ws.status = "learning"
-            started += 1
-    db.commit()
-    compare_lists_to_text(log_id, db)
-    return {
-        "log_id": log_id,
-        "updated_words": touched,
-        "promoted_to_learned": promoted,
-        "started_words": started,
-    }
-=======
     logger.info(f"收到 finish_reading 请求, log_id={log_id}")
     try:
         log = (
@@ -1288,6 +772,8 @@ async def review_update(
         if not log:
             logger.warning(f"log_id={log_id} 未找到学习日志")
             raise HTTPException(404, "Learning-log not found")
+        if log.user_id != user_id:
+            raise HTTPException(300, "this is not your log")
         log.status = 1
         user_id = log.user_id
 
@@ -1368,7 +854,6 @@ async def review_update(
     except Exception as e:
         logger.exception(f"log_id={log_id} finish_reading 服务异常: {e}")
         raise HTTPException(500, f"服务异常: {e}")
->>>>>>> Stashed changes
 
 # ------------------------------------------------------------------------
 # 2️⃣  Next-day preparation endpoint
@@ -1378,31 +863,18 @@ from sqlalchemy import select
 import datetime as dt
 
 @router.post(
-    "/finish_study/{user_id}",
+    "/finish_study",
     summary="Create tomorrow’s logs & outlines for a user",
 )
 async def prepare_tomorrow(
-    user_id: int,
-    db: AsyncSession = Depends(get_db),   # ← AsyncSession
+    db: AsyncSession = Depends(get_db),current_user: TokenData = Depends(get_current_user)   # ← AsyncSession
 ):
+    user_id = current_user.user_id
     """
     • Reads `Learning_setting` for the user
     • Runs the entire *tomorrow* pipeline:
       logs → new words → review words → LLM outlines
     """
-<<<<<<< Updated upstream
-    setting = (
-        db.query(models.Learning_setting)                 # learning_settings :contentReference[oaicite:2]{index=2}
-          .filter(models.Learning_setting.user_id == user_id)
-          .first()
-    )
-    if not setting:
-        raise HTTPException(404, "Learning_setting not found")
-    update_average_caiji_for_user(user_id, db)
-
-    # tomorrow = dt.date.today() + dt.timedelta(days=1)
-    tomorrow = dt.date.today()
-=======
     logger.info(f"收到 finish_study 请求 user_id={user_id}")
     try:
         # async ORM pattern: select(...), await db.execute(...), .scalars().first()
@@ -1419,29 +891,11 @@ async def prepare_tomorrow(
 
         await update_average_caiji_for_user(user_id, db)
         logger.info(f"user_id={user_id} 已更新平均采集值")
->>>>>>> Stashed changes
 
-    # ―― pipeline helpers ――――――――――――――――――――――――――――――――――――――――――――――
-    create_five_learning_logs(user_id, tomorrow, db)
-    assign_daily_new_words(user_id, tomorrow, db)
-    assign_daily_review_words(user_id, tomorrow, db)
-    outlines = await generate_outlines_for_date_async(user_id, tomorrow, db)
+        # tomorrow = dt.date.today() + dt.timedelta(days=1)
+        tomorrow = dt.date.today()
+        logger.info(f"user_id={user_id} 目标日期: {tomorrow}")
 
-<<<<<<< Updated upstream
-    return {
-        "date_prepared": tomorrow.isoformat(),
-        "daily_goal": setting.daily_goal,
-        "chosed_word_book_id": setting.chosed_word_book_id,
-        "outlines_saved": [
-            {
-                "log_id": item["log"].id,
-                "english_title": item["answer"].get("english_title", ""),
-                "chinese_title": item["answer"].get("chinese_title", ""),
-            }
-            for item in outlines
-        ],
-    }
-=======
         await create_five_learning_logs(user_id, tomorrow, db)
         logger.info(f"user_id={user_id} 已创建5条学习日志")
 
@@ -1473,15 +927,11 @@ async def prepare_tomorrow(
     except Exception as e:
         logger.exception(f"user_id={user_id} finish_study 服务异常: {e}")
         raise HTTPException(500, f"服务异常: {e}")
->>>>>>> Stashed changes
 
 
 @router.post("/appreciation/{log_id}/{level}")
-<<<<<<< Updated upstream
-def article_appreciation(log_id:int, level:int, db: Session = Depends(get_db)):
-    log = db.query(models.Learning_log).filter(models.Learning_log.id == log_id).first()
-=======
-async def article_appreciation(log_id: int, level: int, db: AsyncSession = Depends(get_db)):
+async def article_appreciation(log_id: int, level: int, db: AsyncSession = Depends(get_db),current_user: TokenData = Depends(get_current_user)):
+    user_id = current_user.user_id
     logger.info(f"收到 appreciation 打分请求, log_id={log_id}, level={level}")
 
     log = (
@@ -1490,14 +940,12 @@ async def article_appreciation(log_id: int, level: int, db: AsyncSession = Depen
     if not log:
         logger.warning(f"学习日志 log_id={log_id} 未找到")
         raise HTTPException(status_code=404, detail="Learning log not found")
+    if log.user_id != user_id:
+        raise HTTPException(300, "this is not your log")
 
->>>>>>> Stashed changes
     log.appreciation = level
+    logger.debug(f"log_id={log_id} appreciation 设为 {level}")
 
-<<<<<<< Updated upstream
-    if not log:
-        raise HTTPException(status_code=404, detail="Learning log or word not found")
-=======
     try:
         await db.commit()
         logger.success(f"log_id={log_id} appreciation 提交成功，level={level}")
@@ -1505,8 +953,5 @@ async def article_appreciation(log_id: int, level: int, db: AsyncSession = Depen
         await db.rollback()
         logger.exception(f"log_id={log_id} appreciation 提交失败: {e}")
         raise HTTPException(status_code=500, detail="Database commit failed")
->>>>>>> Stashed changes
 
-    db.commit()
-
-    return {"log":log.id, "level":level}
+    return {"log": log.id, "level": level}
