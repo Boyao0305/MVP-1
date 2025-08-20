@@ -1,71 +1,60 @@
-# Use official Miniconda image
-FROM continuumio/miniconda3
+# ✅ 使用 Python 官方 Debian 基础镜像（基于 Debian 11 Bullseye）
+FROM python:3.9-slim-bullseye
 
-# Set working directory
+# ✅ 设置非交互模式（防止 tzdata 卡住）
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ✅ 更换 apt 源为清华大学镜像（HTTP 版，避免证书问题）
+RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian bullseye main contrib non-free\n\
+deb http://mirrors.tuna.tsinghua.edu.cn/debian bullseye-updates main contrib non-free\n\
+deb http://mirrors.tuna.tsinghua.edu.cn/debian-security bullseye-security main contrib non-free" \
+> /etc/apt/sources.list && apt-get update
+
+# ✅ 安装 GCC 和 G++ 编译工具
+RUN apt-get install -y --no-install-recommends gcc g++
+
+# ✅ 安装构建工具
+RUN apt-get install -y --no-install-recommends make build-essential
+
+# ✅ 安装数学库（BLAS, LAPACK）
+RUN apt-get install -y --no-install-recommends libblas-dev liblapack-dev
+
+# ✅ 安装指定版本的 libatlas3-base 和 libatlas-base-dev
+RUN apt-get install -y --no-install-recommends \
+    libatlas3-base=3.10.3-10 libatlas-base-dev
+
+# ✅ 安装 Python 开发库和其他依赖
+RUN apt-get install -y --no-install-recommends python3-dev espeak libespeak1 ffmpeg
+
+# ✅ 清理 APT 缓存，减小镜像体积
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ✅ 设置清华 pip 源，加速安装 Python 包
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 设置工作目录
 WORKDIR /app
 
-# 1️⃣ Copy environment file and create conda environment
-COPY environment.yml .
+# ✅ 拷贝并安装 Python 依赖
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# Install conda environment
-RUN conda env create -f environment.yml
+# ✅ 安装 spaCy 模型（如果使用的是在线模式）
+# RUN python -m spacy download en_core_web_sm
 
-# 2️⃣ Activate environment and install pip-only packages
-# Use full path to conda's Python for reliability in Docker
-RUN /opt/conda/envs/fastapi-env/bin/pip install -i https://pypi.tuna.tsinghua.edu.cn/simple cefrpy
-
-
-# 3️⃣ Update PATH and set up environment activation
-ENV PATH="/opt/conda/envs/fastapi-env/bin:$PATH"
-# Optional: makes "source activate" work in interactive sessions
-RUN echo "source activate fastapi-env" >> ~/.bashrc
-
-# 4️⃣ Copy spaCy model and install it
+# ✅ 如果使用离线模式，拷贝 spaCy 模型并安装
 COPY en_core_web_sm-3.8.0-py3-none-any.whl .
-<<<<<<< Updated upstream
-
-# Install build tools (for compiling Python wheels like blis)
-RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list && \
-    echo "deb http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list && \
-    echo "deb http://deb.debian.org/debian bookworm-updates main" >> /etc/apt/sources.list && \
-    sed -i 's|http://deb.debian.org|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        gcc \
-        g++ \
-        make \
-        build-essential \
-        libblas-dev \
-        liblapack-dev \
-        libatlas-base-dev \
-        python3-dev \
-        espeak \
-        libespeak1 \
-        ffmpeg && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-
-# Use conda env's pip explicitly to avoid issues
-RUN /opt/conda/envs/fastapi-env/bin/pip install spacy \
-    && /opt/conda/envs/fastapi-env/bin/pip install en_core_web_sm-3.8.0-py3-none-any.whl
-
-# 5️⃣ Copy app source code
-=======
 RUN pip install en_core_web_sm-3.8.0-py3-none-any.whl
 RUN pip install --no-cache-dir \
     alibabacloud_dysmsapi20170525 \
     alibabacloud_tea_openapi \
     alibabacloud_tea_util
 # ✅ 拷贝应用源码到容器中
->>>>>>> Stashed changes
 COPY website/ website/
 COPY . .
 
-# 6️⃣ Expose port and define startup command
+# 开放端口
 EXPOSE 8000
 
-# Use full conda env Python to run uvicorn
+# 启动命令
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]
-# Alternative that explicitly uses conda env:
-# CMD ["conda", "run", "--no-capture-output", "-n", "fastapi-env", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

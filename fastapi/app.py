@@ -8,7 +8,7 @@ from routers2 import initiation2, routine2, advanced_options2,tts2, Wtest2, phon
 from website import api1,generation, dictionary
 from tools.English_specialist_api import composition_word
 from database import Base, engine
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 import test
 from tools import service_router
 app = FastAPI()
@@ -21,6 +21,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def on_startup():
+    async with engine.begin() as conn:
+        # optional: await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
 
 
 app.include_router(advanced_options.router)

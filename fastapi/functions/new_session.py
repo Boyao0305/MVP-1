@@ -397,17 +397,7 @@ async def assign_daily_review_words(
 
     await db.commit()
     return result
-<<<<<<< Updated upstream
-from openai import OpenAI
 
-# build once per worker
-async_client = AsyncOpenAI(
-    api_key=os.getenv("DASHSCOPE_API_KEY", "sk-5ccb1709bc5b4ecbbd3aedaf69ca969b"),
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-)
-=======
-
->>>>>>> Stashed changes
 
 PROMPT_TMPL = (
     "词汇：{words}\n\n"
