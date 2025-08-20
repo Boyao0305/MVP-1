@@ -1,7 +1,7 @@
 
 
 data/
-alembic/
+alembic
 *.log
 
 fastapi/key/key.env

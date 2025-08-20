@@ -246,14 +246,11 @@ from key.apikey_vault import APIKeyVault
 APIKeyVault = APIKeyVault()
 
 # ---------- DashScope-compatible client ------------------------------------
-# async_client = AsyncOpenAI(
-#     api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
-#     base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
-# )
 async_client = AsyncOpenAI(
-    api_key = "sk-5ccb1709bc5b4ecbbd3aedaf69ca969b",
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+    api_key = APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+    base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL")
 )
+
 
 # ---------- prompt templates ----------------------------------------------
 from fastapi.background import BackgroundTasks

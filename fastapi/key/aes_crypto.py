@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 # 加载 .env 或 key.env 中的 AES 密钥
 if "AES_SECRET_KEY" not in os.environ:
+    # load_dotenv(dotenv_path="D:/Github/MVP-1/fastapi/key/key.env")
     load_dotenv(dotenv_path="key/key.env")
 
 key = os.getenv("AES_SECRET_KEY")
@@ -29,5 +30,18 @@ def decrypt_string(cipher_text: str) -> str:
     decrypted = cipher.decrypt(cipher_text.encode())
     return decrypted.decode()
 
-
+# ALIYUN_ACCESS_KEY_ID      = "LTAI5tS5Ko53xegPWVAqMkEo"
+# ALIYUN_ACCESS_KEY_SECRET  = "3vwo9wBBjpEckPng40NbznusMigl6j"
+# ALIYUN_SMS_SIGN_NAME      = "北京玛斯特天达系统工程"
+# ALIYUN_SMS_TEMPLATE_CODE  = "SMS_324517197"
+#
+# a = encrypt_string(ALIYUN_ACCESS_KEY_ID)
+# print(a)
+# b = encrypt_string(ALIYUN_ACCESS_KEY_SECRET)
+# print(b)
+# c = encrypt_string(ALIYUN_SMS_SIGN_NAME)
+# print(c)
+# d = encrypt_string(ALIYUN_SMS_TEMPLATE_CODE)
+# print(d)
+#
 

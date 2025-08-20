@@ -14,19 +14,20 @@ from alibabacloud_dysmsapi20170525.client import Client as DysmsapiClient
 from alibabacloud_dysmsapi20170525 import models as sms_models
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_tea_util import models as util_models
-
+from key.apikey_vault import APIKeyVault
 router = APIRouter(prefix="/api")
-
+APIKeyVault = APIKeyVault()
 # -------- Settings (use env-vars; fail fast if missing) ----------
-# ALIYUN_ACCESS_KEY_ID     = os.getenv("ALIYUN_ACCESS_KEY_ID")
-# ALIYUN_ACCESS_KEY_SECRET = os.getenv("ALIYUN_ACCESS_KEY_SECRET")
-# ALIYUN_SMS_SIGN_NAME     = os.getenv("ALIYUN_SMS_SIGN_NAME")
-# ALIYUN_SMS_TEMPLATE_CODE = os.getenv("ALIYUN_SMS_TEMPLATE_CODE")
 
-ALIYUN_ACCESS_KEY_ID      = "LTAI5tS5Ko53xegPWVAqMkEo"
-ALIYUN_ACCESS_KEY_SECRET  = "3vwo9wBBjpEckPng40NbznusMigl6j"
-ALIYUN_SMS_SIGN_NAME      = "北京玛斯特天达系统工程"
-ALIYUN_SMS_TEMPLATE_CODE  = "SMS_324517197"
+ALIYUN_ACCESS_KEY_ID     = APIKeyVault.get_key("ALIYUN_ACCESS_KEY_ID")
+ALIYUN_ACCESS_KEY_SECRET = APIKeyVault.get_key("ALIYUN_ACCESS_KEY_SECRET")
+ALIYUN_SMS_SIGN_NAME     = APIKeyVault.get_key("ALIYUN_SMS_SIGN_NAME")
+ALIYUN_SMS_TEMPLATE_CODE = APIKeyVault.get_key("ALIYUN_SMS_TEMPLATE_CODE")
+
+# ALIYUN_ACCESS_KEY_ID      = "LTAI5tS5Ko53xegPWVAqMkEo"
+# ALIYUN_ACCESS_KEY_SECRET  = "3vwo9wBBjpEckPng40NbznusMigl6j"
+# ALIYUN_SMS_SIGN_NAME      = "北京玛斯特天达系统工程"
+# ALIYUN_SMS_TEMPLATE_CODE  = "SMS_324517197"
 
 # JWT_SECRET  = os.getenv("JWT_SECRET", "change-me")
 # JWT_ISS     = os.getenv("JWT_ISS", "my-app")
