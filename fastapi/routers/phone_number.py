@@ -24,15 +24,7 @@ ALIYUN_ACCESS_KEY_SECRET = APIKeyVault.get_key("ALIYUN_ACCESS_KEY_SECRET")
 ALIYUN_SMS_SIGN_NAME     = APIKeyVault.get_key("ALIYUN_SMS_SIGN_NAME")
 ALIYUN_SMS_TEMPLATE_CODE = APIKeyVault.get_key("ALIYUN_SMS_TEMPLATE_CODE")
 
-# ALIYUN_ACCESS_KEY_ID      = "LTAI5tS5Ko53xegPWVAqMkEo"
-# ALIYUN_ACCESS_KEY_SECRET  = "3vwo9wBBjpEckPng40NbznusMigl6j"
-# ALIYUN_SMS_SIGN_NAME      = "北京玛斯特天达系统工程"
-# ALIYUN_SMS_TEMPLATE_CODE  = "SMS_324517197"
 
-# JWT_SECRET  = os.getenv("JWT_SECRET", "change-me")
-# JWT_ISS     = os.getenv("JWT_ISS", "my-app")
-# JWT_AUD     = os.getenv("JWT_AUDIENCE", "my-users")
-# JWT_EXPIRE  = int(os.getenv("JWT_EXPIRE_MIN", "15"))
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
