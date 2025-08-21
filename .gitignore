@@ -3,6 +3,8 @@
 data/
 alembic
 *.log
+key_program
+
 
 fastapi/key/key.env
 __pycache__/

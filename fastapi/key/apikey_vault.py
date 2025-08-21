@@ -1,9 +1,11 @@
 import json
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from key.aes_crypto import encrypt_string, decrypt_string
 
 VAULT_PATH = "key/keyVault.json"
-
+# VAULT_PATH = r"D:\Github\MVP-1\fastapi\key\keyVault.json"
 class APIKeyVault:
     def __init__(self, path=VAULT_PATH):
         self.path = path
