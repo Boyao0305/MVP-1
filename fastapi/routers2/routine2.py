@@ -34,8 +34,10 @@ from functions.new_session import (                    # ← orchestration helpe
 from functions.cefr import compare_lists_to_text
 from functions.cefr2 import update_average_caiji_for_user
 import json, os, asyncio
+from tools.logger import logger
 
-from tools.logger import logger 
+from key.apikey_vault import APIKeyVault
+
 
        # ← usual DB-session dependency
 # def get_db():
@@ -49,6 +51,8 @@ async def get_db():
     async with SessionLocal() as session:
         yield session
 
+
+APIKeyVault = APIKeyVault()
 router = APIRouter(prefix="/test")
 
 # @app.get("/protected")
@@ -241,9 +245,7 @@ async def read_learning_logs(user_id: int, db: AsyncSession = Depends(get_db)):
     )
     return {"logs": logs, "additional_information": info}
 
-from key.apikey_vault import APIKeyVault
 
-APIKeyVault = APIKeyVault()
 
 # ---------- DashScope-compatible client ------------------------------------
 async_client = AsyncOpenAI(

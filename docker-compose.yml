@@ -40,8 +40,7 @@ services:
 
     volumes:
       - ./fastapi:/app  # 绑定本地代码目录，支持热重载
-#    command: sh -c "sleep 10 && uvicorn app:app --host 0.0.0.0 --port 8000 --reload" # 启用热重载
-    command: sh -c "sleep 10 && uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4" # 启用热重载
+    command: sh -c "sleep 10 && uvicorn app:app --host 0.0.0.0 --port 8000 --reload" # 启用热重载
     ports:
       - "8000:8000"
     environment:
