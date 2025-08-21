@@ -30,18 +30,5 @@ def decrypt_string(cipher_text: str) -> str:
     decrypted = cipher.decrypt(cipher_text.encode())
     return decrypted.decode()
 
-# ALIYUN_ACCESS_KEY_ID      = "LTAI5tS5Ko53xegPWVAqMkEo"
-# ALIYUN_ACCESS_KEY_SECRET  = "3vwo9wBBjpEckPng40NbznusMigl6j"
-# ALIYUN_SMS_SIGN_NAME      = "北京玛斯特天达系统工程"
-# ALIYUN_SMS_TEMPLATE_CODE  = "SMS_324517197"
-#
-# a = encrypt_string(ALIYUN_ACCESS_KEY_ID)
-# print(a)
-# b = encrypt_string(ALIYUN_ACCESS_KEY_SECRET)
-# print(b)
-# c = encrypt_string(ALIYUN_SMS_SIGN_NAME)
-# print(c)
-# d = encrypt_string(ALIYUN_SMS_TEMPLATE_CODE)
-# print(d)
-#
+
 
