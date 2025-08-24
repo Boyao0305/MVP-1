@@ -53,11 +53,18 @@ class Token(BaseModel):
 class RefreshRequest(BaseModel):
     refresh_token: str
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Auth flows
 # ──────────────────────────────────────────────────────────────────────────────
 @router.post("/logintest", response_model=Token)
-async def login_test(data: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login_test(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     logger.info(f"收到 logintest 登录请求，username={data.username}")
 
     # Support sync/async implementations of authenticate_user
@@ -79,7 +86,7 @@ async def login_test(data: schemas.LoginRequest, db: AsyncSession = Depends(get_
 
 
 @router.post("/login")
-async def login(data: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     logger.info(f"收到 login 登录请求，username={data.username}")
 
     if inspect.iscoroutinefunction(authenticate_user):

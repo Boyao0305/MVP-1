@@ -4,6 +4,8 @@ data/
 alembic
 *.log
 key_program
+nginx
+docker-compose.yml
 
 
 fastapi/key/key.env
