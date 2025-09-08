@@ -27,7 +27,7 @@ import schemas
 # =======================
 SECRET_KEY = "super-secret-key"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 100
+ACCESS_TOKEN_EXPIRE_MINUTES = 2
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # In-memory stores (for demo only)

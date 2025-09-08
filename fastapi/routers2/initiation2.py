@@ -357,3 +357,28 @@ async def set_daily_goal(goal: int, db: AsyncSession = Depends(get_db),current_u
     except Exception as e:
         logger.exception(f"user_id={user_id} 日目标设置失败: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/delete_account")
+async def set_daily_goal(db: AsyncSession = Depends(get_db),current_user: TokenData = Depends(get_current_user)):
+    user_id = current_user.user_id
+    logger.info(f"收到 delete_account 请求, user_id={user_id}")
+    try:
+        account = (
+            await db.execute(
+                select(models.User).where(models.User.id == user_id)
+            )
+        ).scalars().first()
+        if not account:
+            logger.warning(f"未找到用户, user_id={user_id}")
+            raise HTTPException(status_code=404, detail="account not found for this user")
+
+        account.username = "112358_deleted_account"+account.username
+        await db.commit()
+        await db.refresh(account)
+        logger.success("删除成功")
+        return "delete successful"
+    except Exception as e:
+        logger.exception("user_id={user_id} 删除失败")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
