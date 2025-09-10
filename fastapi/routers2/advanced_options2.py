@@ -422,7 +422,7 @@ async def get_user_article(db: AsyncSession = Depends(get_db), current_user: Tok
 
 
 @router.get("/all_article", response_model=List[LearningLogResponse])
-async def get_learning_logs(user_id: int, db: AsyncSession = Depends(get_db), current_user: TokenData = Depends(get_current_user)):
+async def get_learning_logs(db: AsyncSession = Depends(get_db), current_user: TokenData = Depends(get_current_user)):
     user_id = current_user.user_id
     logger.info(f"收到 all_article 查询, user_id={user_id}")
     try:
