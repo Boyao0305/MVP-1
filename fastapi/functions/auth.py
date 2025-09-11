@@ -28,7 +28,7 @@ import schemas
 SECRET_KEY = "super-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 2
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+REFRESH_TOKEN_EXPIRE_DAYS = 10
 
 # In-memory stores (for demo only)
 fake_users_db = {
@@ -71,7 +71,7 @@ def create_refresh_token(user_id: int) -> str:
     token = secrets.token_urlsafe(32)
     refresh_token_store[token] = {
         "user_id": user_id,
-        "exp": datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        "exp": datetime.utcnow() + timedelta(minutes=REFRESH_TOKEN_EXPIRE_DAYS),
     }
     return token
 
