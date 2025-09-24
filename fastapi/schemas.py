@@ -35,6 +35,10 @@ class Userget(BaseModel):
 class LoginRequest(Userbase):
     phone_number: str
     code: str
+class RecoveryRequest(BaseModel):
+    password: str
+    phone_number: str
+    code: str
 class ChangePhoneNumber(BaseModel):
     user_id: int
     phone_number: str

@@ -188,24 +188,24 @@ async def refresh_token(req: RefreshRequest):
 
 
 @router.post("/password_recovery")
-async def password_recover(data: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
-    logger.info(f"收到密码找回请求，username={data.username}")
+async def password_recover(data: schemas.RecoveryRequest, db: AsyncSession = Depends(get_db)):
+    logger.info(f"收到密码找回请求")
 
     try:
         if inspect.iscoroutinefunction(recover_password):
-            user = await recover_password(db, data.username, data.password, data.phone_number, data.code)
+            user = await recover_password(db,data.password, data.phone_number, data.code)
         else:
             def _call(sess):
-                return recover_password(sess, data.username, data.password)
+                return recover_password(sess,data.password)
             user = await db.run_sync(_call)
 
-        logger.success(f"密码找回成功，user_id={user.id}, username={user.username}")
-        return {"message": "recovery successful", "username": user.username, "id": user.id}
+        logger.success(f"密码找回成功")
+        return {"message": "recovery successful"}
     except ValueError as e:
-        logger.warning(f"密码找回失败，username={data.username}，原因：{str(e)}")
+        logger.warning(f"密码找回失败,原因：{str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.exception(f"密码找回服务异常，username={data.username}，原因：{e}")
+        logger.exception(f"密码找回服务异常，原因：{e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/change_phone_number")

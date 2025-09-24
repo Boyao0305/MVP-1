@@ -141,6 +141,8 @@ async def create_five_learning_logs(
                 ),
             )
             .where(models.Word_status.status.in_(("unlearned", "learning")))
+            .where(models.Tag.name != "politics")
+
             .distinct()
         )
     ).scalars().all()
@@ -205,6 +207,7 @@ async def assign_daily_new_words(
             joinedload(models.Word_status.l_words).joinedload(models.Word.l_word_books),
         )
         .where(
+            # models.Word.legality != "1",
             models.Word_status.users_id == user_id,
             models.Word_status.status.in_(("unlearned", "learning")),
         )
@@ -319,6 +322,7 @@ async def assign_daily_review_words(
         .join(models.Word.l_word_books)
         .options(joinedload(models.Word_status.l_words).joinedload(models.Word.l_tags))
         .where(
+            # models.Word.legality != "1",
             models.Word_status.users_id == user_id,
             models.Word_book.id == wb_id,
             models.Word_status.status.in_(("learning", "unlearned")),

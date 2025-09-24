@@ -180,14 +180,13 @@ async def register_user(
 
 async def recover_password(
     db: AsyncSession,
-    username: str,
     password: str,
     phone_number: str,
     code: str
 ):
     # 0) Locate user
     result = await db.execute(
-        select(models.User).where(models.User.username == username)
+        select(models.User).where(models.User.phone_number == phone_number)
     )
     user = result.scalars().first()
     if not user:
