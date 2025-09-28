@@ -25,7 +25,8 @@ from functions.auth import (
     create_refresh_token,
     get_current_user
 )
-from functions.auth import refresh_token_store
+# from functions.auth import refresh_token_store
+from functions.auth import _redis, _key, create_access_token, create_refresh_token, Token
 from functions.new_session import (
     assign_word_book,
     set_daily_goal as set_daily_goal_helper,
@@ -161,31 +162,60 @@ async def register(data: schemas.FullRegisterRequest, db: AsyncSession = Depends
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+# @router.post("/refresh", response_model=Token)
+# async def refresh_token(req: RefreshRequest):
+#     logger.info("收到 refresh token 请求")
+#     tokenstring = req.refresh_token
+#     token_data = refresh_token_store.get(tokenstring)
+#
+#     if not token_data:
+#         logger.warning(f"无效的 refresh token: {tokenstring}")
+#         raise HTTPException(status_code=401, detail="Invalid refresh token")
+#
+#     if token_data["exp"] < datetime.utcnow():
+#         logger.warning(f"refresh token 已过期: {tokenstring}")
+#         del refresh_token_store[tokenstring]
+#         raise HTTPException(status_code=401, detail="Refresh token expired")
+#
+#     try:
+#         new_access = create_access_token(user_id=token_data["user_id"], role="user")
+#         new_refresh = create_refresh_token(token_data["user_id"])
+#         del refresh_token_store[tokenstring]
+#         logger.success(f"user_id={token_data['user_id']} refresh token 刷新成功")
+#         return Token(access_token=new_access, refresh_token=new_refresh)
+#     except Exception as e:
+#         logger.exception(f"refresh token 刷新失败: {e}")
+#         raise HTTPException(status_code=500, detail="Token refresh failed")
+
 @router.post("/refresh", response_model=Token)
 async def refresh_token(req: RefreshRequest):
     logger.info("收到 refresh token 请求")
     tokenstring = req.refresh_token
-    token_data = refresh_token_store.get(tokenstring)
 
-    if not token_data:
+    # 1) Read user id bound to this refresh token from Redis (presence implies not expired)
+    try:
+        user_id_str = _redis.get(_key("refresh", tokenstring))
+    except Exception as e:
+        logger.exception(f"Redis 连接失败: {e}")
+        raise HTTPException(status_code=503, detail="Auth store unavailable")
+
+    if not user_id_str:
         logger.warning(f"无效的 refresh token: {tokenstring}")
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    if token_data["exp"] < datetime.utcnow():
-        logger.warning(f"refresh token 已过期: {tokenstring}")
-        del refresh_token_store[tokenstring]
-        raise HTTPException(status_code=401, detail="Refresh token expired")
-
+    # 2) Rotate tokens: issue a new access + refresh, then invalidate the old refresh (single-use)
     try:
-        new_access = create_access_token(user_id=token_data["user_id"], role="user")
-        new_refresh = create_refresh_token(token_data["user_id"])
-        del refresh_token_store[tokenstring]
-        logger.success(f"user_id={token_data['user_id']} refresh token 刷新成功")
+        user_id = int(user_id_str)
+        new_access = create_access_token(user_id=user_id, role="user")
+        new_refresh = create_refresh_token(user_id)
+        _redis.delete(_key("refresh", tokenstring))
+        logger.success(f"user_id={user_id} refresh token 刷新成功")
         return Token(access_token=new_access, refresh_token=new_refresh)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"refresh token 刷新失败: {e}")
         raise HTTPException(status_code=500, detail="Token refresh failed")
-
 
 @router.post("/password_recovery")
 async def password_recover(data: schemas.RecoveryRequest, db: AsyncSession = Depends(get_db)):

@@ -22,7 +22,7 @@ from functions.auth import (
     create_access_token,
     create_refresh_token,
 )
-from functions.auth import refresh_token_store
+# from functions.auth import refresh_token_store
 from functions.new_session import (
     assign_word_book,
     set_daily_goal as set_daily_goal_helper,
@@ -158,30 +158,30 @@ async def register(data: schemas.FullRegisterRequest, db: AsyncSession = Depends
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/refresh", response_model=Token)
-async def refresh_token(req: RefreshRequest):
-    logger.info("收到 refresh token 请求")
-    tokenstring = req.refresh_token
-    token_data = refresh_token_store.get(tokenstring)
-
-    if not token_data:
-        logger.warning(f"无效的 refresh token: {tokenstring}")
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
-
-    if token_data["exp"] < datetime.utcnow():
-        logger.warning(f"refresh token 已过期: {tokenstring}")
-        del refresh_token_store[tokenstring]
-        raise HTTPException(status_code=401, detail="Refresh token expired")
-
-    try:
-        new_access = create_access_token(user_id=token_data["user_id"], role="user")
-        new_refresh = create_refresh_token(token_data["user_id"])
-        del refresh_token_store[tokenstring]
-        logger.success(f"user_id={token_data['user_id']} refresh token 刷新成功")
-        return Token(access_token=new_access, refresh_token=new_refresh)
-    except Exception as e:
-        logger.exception(f"refresh token 刷新失败: {e}")
-        raise HTTPException(status_code=500, detail="Token refresh failed")
+# @router.post("/refresh", response_model=Token)
+# async def refresh_token(req: RefreshRequest):
+#     logger.info("收到 refresh token 请求")
+#     tokenstring = req.refresh_token
+#     token_data = refresh_token_store.get(tokenstring)
+#
+#     if not token_data:
+#         logger.warning(f"无效的 refresh token: {tokenstring}")
+#         raise HTTPException(status_code=401, detail="Invalid refresh token")
+#
+#     if token_data["exp"] < datetime.utcnow():
+#         logger.warning(f"refresh token 已过期: {tokenstring}")
+#         del refresh_token_store[tokenstring]
+#         raise HTTPException(status_code=401, detail="Refresh token expired")
+#
+#     try:
+#         new_access = create_access_token(user_id=token_data["user_id"], role="user")
+#         new_refresh = create_refresh_token(token_data["user_id"])
+#         del refresh_token_store[tokenstring]
+#         logger.success(f"user_id={token_data['user_id']} refresh token 刷新成功")
+#         return Token(access_token=new_access, refresh_token=new_refresh)
+#     except Exception as e:
+#         logger.exception(f"refresh token 刷新失败: {e}")
+#         raise HTTPException(status_code=500, detail="Token refresh failed")
 
 
 @router.post("/password_recovery")
