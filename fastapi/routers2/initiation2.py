@@ -191,6 +191,7 @@ async def register(data: schemas.FullRegisterRequest, db: AsyncSession = Depends
 async def refresh_token(req: RefreshRequest):
     logger.info("收到 refresh token 请求")
     tokenstring = req.refresh_token
+    print(tokenstring)
 
     # 1) Read user id bound to this refresh token from Redis (presence implies not expired)
     try:
