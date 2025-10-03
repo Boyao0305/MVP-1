@@ -239,7 +239,8 @@ async def register_user(
 
 
 async def recover_password(db: AsyncSession, password: str, phone_number: str, code: str):
-    result = await db.execute(select(models.User).where(models.User.phone_number == phone_number))
+    result = await db.execute(select(models.User).where(models.User.phone_number == phone_number).order_by(models.User.id.desc())
+    .limit(1))
     user = result.scalars().first()
     if not user:
         raise ValueError("user name not valid")
