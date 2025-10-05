@@ -37,7 +37,10 @@ import json, os, asyncio
 from tools.logger import logger
 
 from key.apikey_vault import APIKeyVault
-
+from fastapi import WebSocket, WebSocketDisconnect, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
        # ← usual DB-session dependency
 # def get_db():
@@ -356,8 +359,88 @@ async def generate_article_for_log(
         raise HTTPException(500, f"服务异常: {e}")
 
 
+
+@router.websocket("/generation2/{log_id}")
+async def ws_generate_article_for_log(
+    websocket: WebSocket,
+    log_id: int,
+):
+    # 1) Accept connection
+    await websocket.accept()
+
+    # Optionally extract JWT from query params or headers
+    token = websocket.headers.get("Authorization")
+    if not token:
+        await websocket.close(code=4001)
+        return
+    try:
+        current_user = get_current_user(token)
+        print(current_user.user_id)# your own helper
+    except Exception:
+        await websocket.close(code=4003)
+        return
+
+    # 2) Open DB session manually (no Depends in WS)
+    async with SessionLocal() as db:  # you define get_db_session like SessionLocal()
+        try:
+            log = (
+                await db.execute(
+                    select(models.Learning_log)
+                    .options(
+                        selectinload(models.Learning_log.daily_new_words),
+                        selectinload(models.Learning_log.daily_review_words),
+                    )
+                    .where(models.Learning_log.id == log_id)
+                    .order_by(models.Learning_log.id.desc())
+                )
+            ).scalars().first()
+
+            if not log:
+                await websocket.send_text("Error: Learning log not found")
+                await websocket.close()
+                return
+            # if log.user_id != current_user.user_id:
+            #     await websocket.send_text("Error: This is not your log")
+            #     await websocket.close()
+            #     return
+
+            words_list = [w.word for w in log.daily_new_words] + [w2.word for w2 in log.daily_review_words]
+
+            prompt2 = PROMPT_TMPL_ARTICLE.format(
+                english_title=log.english_title,
+                outline=log.outline,
+                vocab=", ".join(words_list),
+                CEFR=log.CEFR or "A2",
+            )
+
+            # 3) Call LLM with streaming
+            stream = await async_client.chat.completions.create(
+                model="deepseek-v3",
+                messages=[{"role": "user", "content": prompt2}],
+                stream=True,
+            )
+
+            collected: list[str] = []
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    text = chunk.choices[0].delta.content
+                    collected.append(text)
+                    await websocket.send_text(text)  # ← send token to client immediately
+
+            # 4) Save final article
+            log.artical = "".join(collected).strip()
+            await db.commit()
+            await websocket.send_text("[END]")  # mark end of stream
+        except WebSocketDisconnect:
+            logger.warning(f"WebSocket disconnected for log_id={log_id}")
+        except Exception as e:
+            await db.rollback()
+            logger.exception(f"log_id={log_id} 服务异常: {e}")
+            await websocket.send_text(f"Error: {e}")
+            await websocket.close(code=1011)
+
 @router.get("/word_search/{log_id}/{word}")
-async def word_search(word: str, log_id: int, db: AsyncSession = Depends(get_db), current_user: TokenData = Depends(get_current_user),):
+async def word_search(word: str, log_id: int, db: AsyncSession =    Depends(get_db), current_user: TokenData = Depends(get_current_user),):
     user_id = current_user.user_id
     logger.info(f"收到 word_search 请求，log_id={log_id}, word={word}")
 

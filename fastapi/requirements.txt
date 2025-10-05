@@ -20,3 +20,4 @@ python-jose
 loguru
 aiomysql
 redis
+websockets
