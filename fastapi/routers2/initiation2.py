@@ -405,6 +405,7 @@ async def set_daily_goal(db: AsyncSession = Depends(get_db),current_user: TokenD
             raise HTTPException(status_code=404, detail="account not found for this user")
 
         account.username = "112358_deleted_account"+account.username
+        account.phone_number = "112358_deleted_account" + account.phone_number
         await db.commit()
         await db.refresh(account)
         logger.success("删除成功")
