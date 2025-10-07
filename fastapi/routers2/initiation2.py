@@ -231,7 +231,7 @@ async def password_recover(data: schemas.RecoveryRequest, db: AsyncSession = Dep
             user = await db.run_sync(_call)
 
         logger.success(f"密码找回成功")
-        return {"message": "recovery successful"}
+        return {"message": "recovery successful", "username": user.username}
     except ValueError as e:
         logger.warning(f"密码找回失败,原因：{str(e)}")
         raise HTTPException(status_code=400, detail=str(e))

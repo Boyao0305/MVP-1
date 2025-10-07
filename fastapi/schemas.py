@@ -40,7 +40,6 @@ class RecoveryRequest(BaseModel):
     phone_number: str
     code: str
 class ChangePhoneNumber(BaseModel):
-    user_id: int
     phone_number: str
     code: str
 # schemas.py
