@@ -34,7 +34,7 @@ class Word(Base):
     definition = Column(String(255))
     CEFR = Column(String(255), index=True)
     phonetic = Column(String(255), index=True)
-    # legality = Column(String(255), index=True)
+    legality = Column(String(255), index=True)
 
     l_word_statuss = relationship("Word_status", back_populates="l_words")
     l_tags = relationship("Tag", secondary="word_tag_links", back_populates="l_words")
