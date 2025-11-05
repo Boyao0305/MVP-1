@@ -927,16 +927,16 @@ async def ws_phrase_explanation(websocket: WebSocket):
         return
 
     # Strip 'Bearer ' if present
-    if token.lower().startswith("bearer "):
-        token = token[7:].strip()
-
-    try:
-        current_user = get_current_user(token)  # your helper
-        user_id = getattr(current_user, "user_id", None)
-    except Exception:
-        await websocket.close(code=4003)  # invalid/expired auth
-        return
-
+    # if token.lower().startswith("bearer "):
+    #     token = token[7:].strip()
+    #
+    # try:
+    #     current_user = get_current_user(token)  # your helper
+    #     user_id = getattr(current_user, "user_id", None)
+    # except Exception:
+    #     await websocket.close(code=4003)  # invalid/expired auth
+    #     return
+    user_id = 1
     try:
         # 3) Read first message (payload)
         first_msg = await websocket.receive_text()
