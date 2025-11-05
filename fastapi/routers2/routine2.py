@@ -781,6 +781,91 @@ async def llm_stream(category: str, req: LLMRequest, current_user: TokenData = D
 class LLMRequest2(BaseModel):
     content: str
     translation: str
+
+@router.websocket("/content_search2/{category}")
+async def ws_llm_stream(
+    websocket: WebSocket,
+    category: str,
+):
+    """
+    WebSocket streaming generation for content_search/{category}.
+    Client must send a first JSON message: {"content": "..."}.
+    Auth is read from the "Authorization" header (like your example).
+    """
+    # 1) Accept connection
+    await websocket.accept()
+
+    # 2) Auth (same style as your example)
+    # token = websocket.headers.get("Authorization")
+    # print(token)
+    # if not token:
+    #     await websocket.close(code=4001)  # missing auth
+    #     return
+    # try:
+    #
+    #
+    #     current_user = get_current_user(token)  # your helper; adjust if it expects bare token vs "Bearer ..."
+    # except Exception:
+    #     await websocket.close(code=4003)  # invalid auth
+    #     return
+
+    try:
+        # 3) Receive the request payload (first message)
+        #    Expecting {"content": "..."} to mirror your LLMRequest
+        first_msg = await websocket.receive_text()
+        try:
+            data = json.loads(first_msg)
+        except json.JSONDecodeError:
+            await websocket.send_text("Error: First message must be JSON like {'content': '...'}")
+            await websocket.close(code=4002)
+            return
+
+        req_content = (data.get("content") or "").strip()
+        if not req_content:
+            await websocket.send_text("Error: 'content' is required in the first message")
+            await websocket.close(code=4002)
+            return
+        #
+        # logger.info(f"收到 WS content_search 请求, user_id={getattr(current_user, 'user_id', None)}, category={category}, content={req_content[:80]}")
+
+        # 4) Build prompt (same logic as your HTTP version)
+        prompt_word = f"请给出这个英文词组的中文翻译，请只返回答案本身；如果英文内容不是词组，请返回“内容不是词组”：{req_content}"
+        prompt_phrase = f"请猜测语境并给出这个英文句子的中文翻译，请只返回答案本身：{req_content}"
+        prompt = prompt_word if category == "word_group" else prompt_phrase
+        logger.debug(f"category={category}, prompt={prompt}")
+
+        # 5) Create async OpenAI client and start streaming
+        async_client = AsyncOpenAI(
+            api_key=APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+            base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
+        )
+
+        stream = await async_client.chat.completions.create(
+            model="deepseek-v3",
+            messages=[{"role": "user", "content": prompt}],
+            stream=True,
+        )
+        logger.info(f"category={category}, WS LLM 流式生成开始")
+
+        collected: List[str] = []
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                text = chunk.choices[0].delta.content
+                collected.append(text)
+                await websocket.send_text(text)  # push token immediately
+
+        # 6) Done — optionally mark end
+        await websocket.send_text("[END]")
+    except WebSocketDisconnect:
+        logger.warning(f"WebSocket disconnected for category={category}")
+    except Exception as e:
+        logger.exception(f"category={category}, content_search WS 服务异常: {e}")
+        # Best-effort error message to client if still open:
+        try:
+            await websocket.send_text(f"Error: {e}")
+            await websocket.close(code=1011)
+        except Exception:
+            pass
 @router.post(
     "/phrase_explanation",
     response_class=StreamingResponse,
@@ -824,6 +909,92 @@ async def llm_stream(req: LLMRequest2, current_user: TokenData = Depends(get_cur
     except Exception as e:
         logger.exception(f"user_id={user_id}, phrase_explanation 服务异常: {e}")
         raise HTTPException(500, f"服务异常: {e}")
+
+@router.websocket("/phrase_explanation2")
+async def ws_phrase_explanation(websocket: WebSocket):
+    """
+    WebSocket streaming for phrase_explanation.
+    Client must send FIRST message as JSON: {"content": "..."}.
+    Auth token is taken from the 'Authorization' header (e.g., 'Bearer <jwt>').
+    """
+    # 1) Accept
+    await websocket.accept()
+
+    # 2) Auth (same style as your other WS endpoint)
+    token = websocket.headers.get("Authorization")
+    if not token:
+        await websocket.close(code=4001)  # missing auth
+        return
+
+    # Strip 'Bearer ' if present
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
+
+    try:
+        current_user = get_current_user(token)  # your helper
+        user_id = getattr(current_user, "user_id", None)
+    except Exception:
+        await websocket.close(code=4003)  # invalid/expired auth
+        return
+
+    try:
+        # 3) Read first message (payload)
+        first_msg = await websocket.receive_text()
+        try:
+            data = json.loads(first_msg)
+        except json.JSONDecodeError:
+            await websocket.send_text("Error: first message must be JSON like {'content': '...'}")
+            await websocket.close(code=4002)
+            return
+
+        req_content = (data.get("content") or "").strip()
+        if not req_content:
+            await websocket.send_text("Error: 'content' is required")
+            await websocket.close(code=4002)
+            return
+
+        logger.info(f"收到 phrase_explanation WS 请求, user_id={user_id}, content={req_content[:80]}")
+
+        # 4) Build prompt (same as your HTTP version)
+        prompt_explication = (
+            "请用中文相对简短得解释这个英语句子（长难句）的意思（分模块解释，而非直接给出翻译），"
+            "再列出中的重要语法点（固定搭配，表达，词组等，请最多挑出3-4点做简短的解释. ）"
+            f"{req_content}"
+        )
+        logger.debug(f"user_id={user_id}, prompt_explication={prompt_explication}")
+
+        # 5) Start LLM stream
+        async_client = AsyncOpenAI(
+            api_key=APIKeyVault.get_key("DASHSCOPE_API_KEY"),
+            base_url=APIKeyVault.get_key("DASHSCOPE_BASE_URL"),
+        )
+
+        stream = await async_client.chat.completions.create(
+            model="deepseek-v3",
+            messages=[{"role": "user", "content": prompt_explication}],
+            stream=True,
+        )
+        logger.info(f"user_id={user_id}, phrase_explanation WS 流式生成开始")
+
+        collected: List[str] = []
+        async for chunk in stream:
+            if chunk.choices and getattr(chunk.choices[0], "delta", None) and chunk.choices[0].delta.content:
+                text = chunk.choices[0].delta.content
+                collected.append(text)
+                await websocket.send_text(text)  # stream token to client
+
+        logger.success(f"user_id={user_id}, phrase_explanation 流式输出完成")
+        await websocket.send_text("[END]")  # optional end marker
+
+    except WebSocketDisconnect:
+        logger.warning(f"WebSocket disconnected for phrase_explanation, user_id={user_id}")
+    except Exception as e:
+        logger.exception(f"user_id={user_id}, phrase_explanation WS 服务异常: {e}")
+        try:
+            await websocket.send_text(f"Error: {e}")
+            await websocket.close(code=1011)
+        except Exception:
+            pass
 # --------------------------- main endpoint -------------------------------
 @router.post(
     "/finish_reading/{log_id}",
