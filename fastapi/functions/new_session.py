@@ -201,13 +201,13 @@ async def assign_daily_new_words(
 
     ws_result = await db.execute(
         select(models.Word_status)
-        .join(models.Word)
+        .join(models.Word_status.l_words)
         .options(
             joinedload(models.Word_status.l_words).joinedload(models.Word.l_tags),
             joinedload(models.Word_status.l_words).joinedload(models.Word.l_word_books),
         )
         .where(
-            models.Word.legality != "false",
+            models.Word.legality.is_(None),
             models.Word_status.users_id == user_id,
             models.Word_status.status.in_(("unlearned", "learning")),
         )
@@ -318,11 +318,11 @@ async def assign_daily_review_words(
 
     ws_result = await db.execute(
         select(models.Word_status)
-        .join(models.Word)
+        .join(models.Word_status.l_words)
         .join(models.Word.l_word_books)
         .options(joinedload(models.Word_status.l_words).joinedload(models.Word.l_tags))
         .where(
-            models.Word.legality != "false",
+            models.Word.legality.is_(None),
             models.Word_status.users_id == user_id,
             models.Word_book.id == wb_id,
             models.Word_status.status.in_(("learning", "unlearned")),
