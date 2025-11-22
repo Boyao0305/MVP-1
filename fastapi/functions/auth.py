@@ -46,7 +46,7 @@ import schemas
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_MIN", "15"))
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_DAYS", "5"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_DAYS", "7"))
 
 # Redis setup (shared across workers)
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
@@ -100,9 +100,9 @@ def create_access_token(user_id: int, role: str) -> str:
     Returns the JWT string. This function remains synchronous to preserve
     existing call sites.
     """
-    token = create_token({"user_id": user_id, "role": role}, timedelta(seconds=ACCESS_TOKEN_EXPIRE_MINUTES))
+    token = create_token({"user_id": user_id, "role": role}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     try:
-        ttl = ACCESS_TOKEN_EXPIRE_MINUTES
+        ttl = ACCESS_TOKEN_EXPIRE_MINUTES * 60
         # Store minimal data; value can be anything (we use JSON for future-proofing)
         _redis.setex(_key("access", token), ttl, json.dumps({"user_id": user_id, "role": role}))
     except Exception:
