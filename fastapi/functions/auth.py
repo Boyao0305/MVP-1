@@ -45,7 +45,7 @@ import schemas
 # =======================
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_MIN", "0.25"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_MIN", "1"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_DAYS", "5"))
 
 # Redis setup (shared across workers)
@@ -102,7 +102,7 @@ def create_access_token(user_id: int, role: str) -> str:
     """
     token = create_token({"user_id": user_id, "role": role}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     try:
-        ttl = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        ttl = ACCESS_TOKEN_EXPIRE_MINUTES * 15
         # Store minimal data; value can be anything (we use JSON for future-proofing)
         _redis.setex(_key("access", token), ttl, json.dumps({"user_id": user_id, "role": role}))
     except Exception:
