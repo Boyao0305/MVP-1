@@ -40,8 +40,8 @@ from key.apikey_vault import APIKeyVault
 from fastapi import WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
-
+from sqlalchemy.orm import selectinload, contains_eager
+from sqlalchemy.ext.asyncio import AsyncSession
        # ← usual DB-session dependency
 # def get_db():
 #     db = SessionLocal()
@@ -78,6 +78,27 @@ class TokenData(BaseModel):
     user_id: int
     role: str
 # ─────────────────────────── route ────────────────────────
+
+@router.get(
+    "/words_with_caiji",
+)
+async def read_learning_logs( current_user: TokenData = Depends(get_current_user),db: AsyncSession = Depends(get_db)):
+    user_id = current_user.user_id
+    logger.info(f"用户请求 words_with_caiji, user_id={user_id}")
+    stmt = (
+        select(models.Word)
+        .join(models.Word_status, models.Word_status.words_id == models.Word.id)
+        .where(models.Word_status.users_id == user_id)
+        # contains_eager says: "the joined C rows should populate A.links"
+        .options(contains_eager(models.Word.l_word_statuss))
+        .order_by(models.Word_status.learning_factor.desc())
+        .limit(50)
+    )
+
+    result = await db.execute(stmt)
+    a_rows = result.unique().scalars().all()
+    return {"words": a_rows}
+
 @router.get(
     "/daily_learning_logs",
     response_model=DailyLogsWithInfoOut,

@@ -11,6 +11,10 @@ from functions.new_session import create_five_learning_logs, assign_daily_new_wo
 from functions.cefr import compare_lists_to_text
 from typing import List, Optional
 from sqlalchemy.sql.expression import func
+from fastapi import WebSocket, WebSocketDisconnect, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload, contains_eager
 
 router = APIRouter(prefix="/api")
 
@@ -20,6 +24,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
 
 
 # ADD
