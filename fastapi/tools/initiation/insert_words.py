@@ -1,4 +1,5 @@
 from pygments.lexers import data
+from tqdm import tqdm
 
 import sys
 import os
@@ -24,7 +25,7 @@ try:
 
     df = df.where(pd.notnull(df), None)
 
-    for _, row in df.iterrows():
+    for _, row in tqdm(df.iterrows(), desc='Progress of the word insertion', total=len(df), unit='row'):
         tag1 = row['tag']
         word_book1 = row['word_book']
         words = models.Word(word=row['word'], definition=row['definition'], CEFR=row['CEFR'], phonetic=row['phonetic'])
