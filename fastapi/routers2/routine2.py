@@ -1,10 +1,12 @@
 # routers/learning_log_outline.py
+# from spacy.pipeline.transition_parser import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, case, func
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 import json, os, asyncio
 from fastapi.responses import StreamingResponse
 import models
@@ -1229,3 +1231,13 @@ async def article_appreciation(log_id: int, level: int, db: AsyncSession = Depen
         raise HTTPException(status_code=500, detail="Database commit failed")
 
     return {"log": log.id, "level": level}
+@router.post("/caiji_time_function")
+async def article_appreciation(db: AsyncSession = Depends(get_db)):
+    stmt = (
+        update(models.Word_status)
+        .values(learning_factor=models.Word_status.learning_factor - 0.05)
+    )
+
+    await db.execute(stmt)
+    await db.commit()
+

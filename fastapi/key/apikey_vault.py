@@ -36,3 +36,7 @@ class APIKeyVault:
 
     def list_keys(self):
         return list(self._load().keys())
+
+# API = APIKeyVault()
+#
+# answer = APIKeyVault.add_key(API, name="WechatID", plain_key="...")

@@ -3,6 +3,7 @@
 import os, time, json, asyncio, random, string
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import httpx
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -22,7 +23,8 @@ ALIYUN_ACCESS_KEY_ID     = APIKeyVault.get_key("ALIYUN_ACCESS_KEY_ID")
 ALIYUN_ACCESS_KEY_SECRET = APIKeyVault.get_key("ALIYUN_ACCESS_KEY_SECRET")
 ALIYUN_SMS_SIGN_NAME     = APIKeyVault.get_key("ALIYUN_SMS_SIGN_NAME")
 ALIYUN_SMS_TEMPLATE_CODE = APIKeyVault.get_key("ALIYUN_SMS_TEMPLATE_CODE")
-
+# WechatID     = APIKeyVault.get_key("WechatID ")
+# WechatSECRET = APIKeyVault.get_key("WechatSECRET")
 
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
@@ -190,3 +192,34 @@ async def verify_code2(body: VerifyCodeIn):
 
     await r.delete(key)
     return {"verified": True}
+
+class WeChatLoginRequest(BaseModel):
+    code: str
+
+# @router.post("/login/wechat")
+# async def wechat_login(payload: WeChatLoginRequest):
+#     url = "https://api.weixin.qq.com/sns/oauth2/access_token"
+#     params = {
+#         "appid": WechatID,
+#         "secret": WechatSECRET,
+#         "code": payload.code,
+#         "grant_type": "authorization_code"
+#     }
+#     async with httpx.AsyncClient() as client:
+#         resp = await client.get(url, params=params)
+#         data = resp.json()
+#
+#     if "errcode" in data:
+#         raise HTTPException(400, data.get("errmsg"))
+#
+#     openid = data["openid"]
+#     access_token = data["access_token"]
+#     unionid = data.get("unionid")
+#
+#     # Check if user exists
+#     user = await get_user_by_unionid(unionid or openid)
+#     if not user:
+#         user = await create_user_from_wechat(openid, unionid)
+#
+#     jwt_token = create_jwt_token(user.id)
+#     return {"token": jwt_token, "user": user}

@@ -150,13 +150,18 @@ async def create_five_learning_logs(
     if not eligible_tags:
         raise HTTPException(400, "No tag has words left in 'unlearned' or 'learning' status")
 
-    chosen_tags = random.sample(eligible_tags, min(5, len(eligible_tags)))
+    chosen_tags = random.sample(eligible_tags, min(3, len(eligible_tags)))
+
     while len(chosen_tags) < 5:
         chosen_tags.append(random.choice(eligible_tags))
-
+    chosen_tags2 = []
+    for tag in chosen_tags:
+        chosen_tags2.append(tag.name)
+    chosen_tags2.append("None")
+    chosen_tags2.append("None")
     new_logs = [
-        models.Learning_log(user_id=user_id, tag=tag.name, CEFR=cefr_level, date=today)
-        for tag in chosen_tags
+        models.Learning_log(user_id=user_id, tag=tag, CEFR=cefr_level, date=today)
+        for tag in chosen_tags2
     ]
     db.add_all(new_logs)
     await db.commit()
@@ -245,8 +250,10 @@ async def assign_daily_new_words(
     assigned: Dict[int, List[int]] = {}
 
     for log in logs:
-        tag_half = daily_goal // 2
-        none_half = daily_goal - tag_half
+        # tag_half = daily_goal // 2
+        # none_half = daily_goal - tag_half
+        tag_half = daily_goal
+        none_half = 0
         selected: list[models.Word] = []
         already = set()
 
@@ -271,9 +278,9 @@ async def assign_daily_new_words(
         selected += tag_words
         already |= {w.id for w in tag_words}
 
-        none_words = _pick("None", none_half)
-        none_words = [w for w in none_words if w.id not in already]
-        selected += none_words
+        # none_words = _pick("None", none_half)
+        # none_words = [w for w in none_words if w.id not in already]
+        # selected += none_words
 
         if selected:
             log.daily_new_words.extend(selected)
@@ -310,10 +317,10 @@ async def assign_daily_review_words(
             .options(selectinload(models.Learning_log.daily_review_words))
             .where(models.Learning_log.user_id == user_id, models.Learning_log.date == today)
             .order_by(models.Learning_log.id.desc())
-            .limit(5)
+            .limit(10)
         )
     ).scalars().all()
-    if len(logs) < 5:
+    if len(logs) < 10:
         raise HTTPException(400, f"Need 5 logs for today, found {len(logs)}")
 
     ws_result = await db.execute(
@@ -369,8 +376,8 @@ async def assign_daily_review_words(
     result: Dict[int, List[models.Word_status]] = {}
 
     for log in logs:
-        tag_quota = daily_goal
-        none_quota = daily_goal
+        tag_quota = daily_goal*2
+        # none_quota = daily_goal
         already_ids = {w.id for w in log.daily_review_words}
         selected_ws: List[models.Word_status] = []
 
@@ -384,14 +391,14 @@ async def assign_daily_review_words(
         selected_ws.extend(ws_tag)
         already_ids.update(ws.l_words.id for ws in ws_tag)
 
-        ws_none = _pick(
-            tag_name="None",
-            quota=none_quota,
-            already_word_ids=already_ids,
-            allow_learning=allow_learning_in_none,
-            random_unlearned=not allow_learning_in_none,
-        )
-        selected_ws.extend(ws_none)
+        # ws_none = _pick(
+        #     tag_name="None",
+        #     quota=none_quota,
+        #     already_word_ids=already_ids,
+        #     allow_learning=allow_learning_in_none,
+        #     random_unlearned=not allow_learning_in_none,
+        # )
+        # selected_ws.extend(ws_none)
 
         for ws in selected_ws:
             if ws.l_words not in log.daily_review_words:
