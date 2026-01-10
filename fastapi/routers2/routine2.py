@@ -1235,7 +1235,7 @@ async def article_appreciation(log_id: int, level: int, db: AsyncSession = Depen
 async def article_appreciation(db: AsyncSession = Depends(get_db)):
     stmt = (
         update(models.Word_status)
-        .values(learning_factor=models.Word_status.learning_factor - 0.05)
+        .values(learning_factor=models.Word_status.learning_factor - 0.01)
     )
 
     await db.execute(stmt)
