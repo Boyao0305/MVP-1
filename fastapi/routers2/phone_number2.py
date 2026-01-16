@@ -4,11 +4,11 @@ import os, time, json, asyncio, random, string
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import httpx
-
+import models
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from jose import jwt
-
+from fastapi import APIRouter, Depends, HTTPException
 import redis.asyncio as redis
 # ---- Aliyun SMS SDK (sync; we'll offload to thread) ----
 from alibabacloud_dysmsapi20170525.client import Client as DysmsapiClient
@@ -16,6 +16,24 @@ from alibabacloud_dysmsapi20170525 import models as sms_models
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_tea_util import models as util_models
 from key.apikey_vault import APIKeyVault
+from sqlalchemy.ext.asyncio import AsyncSession
+from database import SessionLocal
+from sqlalchemy import func, select
+from functions.auth import (
+    authenticate_user,
+    register_user,
+    change_number,
+    recover_password,
+    create_access_token,
+    create_refresh_token,
+    get_current_user
+)
+from tools.logger import logger
+async def get_db():
+    async with SessionLocal() as session:
+        yield session
+
+
 router = APIRouter(prefix="/test")
 APIKeyVault = APIKeyVault()
 
@@ -23,8 +41,8 @@ ALIYUN_ACCESS_KEY_ID     = APIKeyVault.get_key("ALIYUN_ACCESS_KEY_ID")
 ALIYUN_ACCESS_KEY_SECRET = APIKeyVault.get_key("ALIYUN_ACCESS_KEY_SECRET")
 ALIYUN_SMS_SIGN_NAME     = APIKeyVault.get_key("ALIYUN_SMS_SIGN_NAME")
 ALIYUN_SMS_TEMPLATE_CODE = APIKeyVault.get_key("ALIYUN_SMS_TEMPLATE_CODE")
-# WechatID     = APIKeyVault.get_key("WechatID ")
-# WechatSECRET = APIKeyVault.get_key("WechatSECRET")
+WechatID     = APIKeyVault.get_key("WechatID")
+WechatSECRET = APIKeyVault.get_key("WechatSECRET")
 
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
@@ -196,30 +214,41 @@ async def verify_code2(body: VerifyCodeIn):
 class WeChatLoginRequest(BaseModel):
     code: str
 
-# @router.post("/login/wechat")
-# async def wechat_login(payload: WeChatLoginRequest):
-#     url = "https://api.weixin.qq.com/sns/oauth2/access_token"
-#     params = {
-#         "appid": WechatID,
-#         "secret": WechatSECRET,
-#         "code": payload.code,
-#         "grant_type": "authorization_code"
-#     }
-#     async with httpx.AsyncClient() as client:
-#         resp = await client.get(url, params=params)
-#         data = resp.json()
-#
-#     if "errcode" in data:
-#         raise HTTPException(400, data.get("errmsg"))
-#
-#     openid = data["openid"]
-#     access_token = data["access_token"]
-#     unionid = data.get("unionid")
-#
-#     # Check if user exists
-#     user = await get_user_by_unionid(unionid or openid)
-#     if not user:
-#         user = await create_user_from_wechat(openid, unionid)
-#
-#     jwt_token = create_jwt_token(user.id)
-#     return {"token": jwt_token, "user": user}
+@router.post("/login/wechat")
+async def wechat_login(payload: WeChatLoginRequest, db: AsyncSession = Depends(get_db)):
+    url = "https://api.weixin.qq.com/sns/oauth2/access_token"
+    params = {
+        "appid": WechatID,
+        "secret": WechatSECRET,
+        "code": payload.code,
+        "grant_type": "authorization_code"
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, params=params)
+        data = resp.json()
+
+    if "errcode" in data:
+        raise HTTPException(400, data.get("errmsg"))
+
+    openid = data["openid"]
+
+    user = (
+        await db.execute(select(models.User).where(models.User.openid == openid))
+    ).scalars().first()
+    if not user:
+        user = models.User(
+            membership=0,
+            consecutive_learning=0,
+            openid=openid,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        access_token = create_access_token(user_id=user.id, role="user")
+        refresh_token = create_refresh_token(user_id=user.id)
+        return {"status": "register", "access_token": access_token, "refresh_token": refresh_token}
+    else:
+        access_token = create_access_token(user_id=user.id, role="user")
+        refresh_token = create_refresh_token(user_id=user.id)
+        logger.success(f"logintest 登录成功，user_id={user.id}, username={getattr(user, 'username', '<unknown>')}")
+        return {"status": "login", "access_token": access_token, "refresh_token": refresh_token}

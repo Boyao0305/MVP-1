@@ -320,7 +320,7 @@ async def assign_daily_review_words(
             .limit(10)
         )
     ).scalars().all()
-    if len(logs) < 10:
+    if len(logs) < 5:
         raise HTTPException(400, f"Need 5 logs for today, found {len(logs)}")
 
     ws_result = await db.execute(

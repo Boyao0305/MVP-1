@@ -8,11 +8,12 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
+    username = Column(String(255), unique=True, index=True, nullable=True)
+    hashed_password = Column(String(255), nullable=True)
     phone_number = Column(String(255), nullable=True)
     membership = Column(Integer, default=False)
     consecutive_learning = Column(Integer, nullable=False, default=0)
+    openid = Column(String(255), nullable=True)
 
     l_word_statuss = relationship("Word_status", back_populates="l_users")
 
