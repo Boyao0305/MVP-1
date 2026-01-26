@@ -26,7 +26,9 @@ from functions.auth import (
     recover_password,
     create_access_token,
     create_refresh_token,
-    get_current_user
+    get_current_user,
+
+
 )
 from tools.logger import logger
 async def get_db():
@@ -108,6 +110,7 @@ def _rate_key(phone: str) -> str:
 def _code_key(phone: str) -> str:
     return f"sms:code:{phone}"
 
+
 # ---------- Endpoints (async) ----------
 @router.post("/auth/send_code")
 async def send_code(body: SendCodeIn):
@@ -165,52 +168,52 @@ class VerifyCodeIn(BaseModel):
     code: str
 
 # @router.post("/auth/verify_code", response_model=TokenOut)
-async def verify_code(phone: str, code: str):
-    """
-    Step 2: verify OTP; create/fetch user; issue JWT. (fully async)
-    """
-    print(phone)
-
-    phone = _norm_cn_phone(phone)
-    key = _code_key(phone)
-
-    saved = await r.get(key)
-    print(saved)
-    print(code)
-    if not saved:
-        raise HTTPException(400, detail="Invalid or expired code")
-
-    # Normalize both sides to str for safe comparison
-    if str(saved) != str(code):
-        raise HTTPException(400, detail="Invalid or expired code")
-
-    await r.delete(key)
-    return {"verified": True}
-
-
-
-@router.post("/auth/verify_code")
-async def verify_code2(body: VerifyCodeIn):
-    """
-    Step 2: verify OTP; create/fetch user; issue JWT. (fully async)
-    """
-    code = body.code
-    phone = _norm_cn_phone(body.phone)
-    key = _code_key(phone)
-
-    saved = await r.get(key)
-    print(str(saved))
-    print(str(code))
-    if not saved:
-        raise HTTPException(400, detail="code doesn't exist")
-
-    # Normalize both sides to str for safe comparison
-    if str(saved) != str(code):
-        raise HTTPException(400, detail="Invalid or expired code")
-
-    await r.delete(key)
-    return {"verified": True}
-
+# async def verify_code(phone: str, code: str):
+#     """
+#     Step 2: verify OTP; create/fetch user; issue JWT. (fully async)
+#     """
+#     print(phone)
+#
+#     phone = _norm_cn_phone(phone)
+#     key = _code_key(phone)
+#
+#     saved = await r.get(key)
+#     print(saved)
+#     print(code)
+#     if not saved:
+#         raise HTTPException(400, detail="Invalid or expired code")
+#
+#     # Normalize both sides to str for safe comparison
+#     if str(saved) != str(code):
+#         raise HTTPException(400, detail="Invalid or expired code")
+#
+#     await r.delete(key)
+#     return {"verified": True}
+#
+#
+#
+# @router.post("/auth/verify_code")
+# async def verify_code2(body: VerifyCodeIn):
+#     """
+#     Step 2: verify OTP; create/fetch user; issue JWT. (fully async)
+#     """
+#     code = body.code
+#     phone = _norm_cn_phone(body.phone)
+#     key = _code_key(phone)
+#
+#     saved = await r.get(key)
+#     print(str(saved))
+#     print(str(code))
+#     if not saved:
+#         raise HTTPException(400, detail="code doesn't exist")
+#
+#     # Normalize both sides to str for safe comparison
+#     if str(saved) != str(code):
+#         raise HTTPException(400, detail="Invalid or expired code")
+#
+#     await r.delete(key)
+#     return {"verified": True}
+#
 class WeChatLoginRequest(BaseModel):
     code: str
 
