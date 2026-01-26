@@ -247,6 +247,13 @@ async def wechat_login(payload: WeChatLoginRequest, db: AsyncSession = Depends(g
         db.add(user)
         await db.commit()
         await db.refresh(user)
+        setting = models.Learning_setting(
+            user_id=user.id,
+            chosed_word_book_id=1,
+        )
+        db.add(setting)
+        await db.commit()
+        await db.refresh(setting)
         access_token = create_access_token(user_id=user.id, role="user")
         refresh_token = create_refresh_token(user_id=user.id)
         return {"status": "register", "access_token": access_token, "refresh_token": refresh_token}
