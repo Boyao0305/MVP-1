@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from key.aes_crypto import encrypt_string, decrypt_string
 
 VAULT_PATH = "key/keyVault.json"
-# VAULT_PATH = r"D:\Github\MVP-1\fastapi\key\keyVault.json"
+# VAULT_PATH = r"F:\Github\MVP-1\fastapi\key\keyVault.json"
 class APIKeyVault:
     def __init__(self, path=VAULT_PATH):
         self.path = path
@@ -37,6 +37,8 @@ class APIKeyVault:
     def list_keys(self):
         return list(self._load().keys())
 
-# API = APIKeyVault()
-#
-# answer = APIKeyVault.add_key(API, name="WechatID", plain_key="...")
+API = APIKeyVault()
+
+# answer = APIKeyVault.add_key(API, name="WechatID", plain_key="wx778c1735212de08a")
+# answer = APIKeyVault.get_key(API, name="WechatID")
+# print(answer)

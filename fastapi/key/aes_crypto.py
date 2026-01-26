@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 # 加载 .env 或 key.env 中的 AES 密钥
 if "AES_SECRET_KEY" not in os.environ:
-    # load_dotenv(dotenv_path="D:/Github/MVP-1/fastapi/key/key.env")
+    # load_dotenv(dotenv_path="F:/Github/MVP-1/fastapi/key/key.env")
     load_dotenv(dotenv_path="key/key.env")
 
 key = os.getenv("AES_SECRET_KEY")
