@@ -217,6 +217,8 @@ class WeChatLoginRequest(BaseModel):
 @router.post("/login/wechat")
 async def wechat_login(payload: WeChatLoginRequest, db: AsyncSession = Depends(get_db)):
     print(payload.code)
+    print(WechatID)
+    print(WechatSECRET)
     url = "https://api.weixin.qq.com/sns/oauth2/access_token"
     params = {
         "appid": WechatID,
