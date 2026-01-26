@@ -188,27 +188,27 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
     if not ok:
         return None
     return user
-async def verify_code(phone: str, code: str):
-    """
-    Step 2: verify OTP; create/fetch user; issue JWT. (fully async)
-    """
-    print(phone)
-
-    phone = _norm_cn_phone(phone)
-    key = _code_key(phone)
-
-    saved = await r.get(key)
-    print(saved)
-    print(code)
-    if not saved:
-        raise HTTPException(400, detail="Invalid or expired code")
-
-    # Normalize both sides to str for safe comparison
-    if str(saved) != str(code):
-        raise HTTPException(400, detail="Invalid or expired code")
-
-    await r.delete(key)
-    return {"verified": True}
+# async def verify_code(phone: str, code: str):
+#     """
+#     Step 2: verify OTP; create/fetch user; issue JWT. (fully async)
+#     """
+#     print(phone)
+#
+#     phone = _norm_cn_phone(phone)
+#     key = _code_key(phone)
+#
+#     saved = await r.get(key)
+#     print(saved)
+#     print(code)
+#     if not saved:
+#         raise HTTPException(400, detail="Invalid or expired code")
+#
+#     # Normalize both sides to str for safe comparison
+#     if str(saved) != str(code):
+#         raise HTTPException(400, detail="Invalid or expired code")
+#
+#     await r.delete(key)
+#     return {"verified": True}
 
 async def register_user(
     db: AsyncSession,
